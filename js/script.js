@@ -19,7 +19,8 @@ document.addEventListener("DOMContentLoaded", () => {
           path.addEventListener("mouseenter", () => {
             const nomeParroquia = path.getAttribute("data-parroquia");
             const nomeConcello = path.getAttribute("data-nomeconcel");
-            info.textContent = `Parroquia: ${nomeParroquia} | Concello: ${nomeConcello}`;
+            const nomeComarca = path.getAttribute("data-comarca");
+            info.textContent = `Parroquia: ${nomeParroquia} | Concello: ${nomeConcello} | Comarca: ${nomeComarca}`;
             path.classList.add("selected");
           });
   
