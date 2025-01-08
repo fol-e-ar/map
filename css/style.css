@@ -1,70 +1,128 @@
-/* Estilo general */
+/* General */
 body {
-  font-family: Arial, sans-serif;
+  font-family: 'Roboto', sans-serif;
   margin: 0;
   padding: 0;
+  background-color: #f9fafb; /* Fondo suave */
+  color: #333;
   text-align: center;
 }
 
+/* Header */
 header {
   position: fixed;
   top: 0;
   left: 0;
   width: 100%;
-  background-color: #f4f4f4;
-  padding: 10px;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+  background-color: #ffffff; /* Fondo blanco */
+  padding: 10px 0;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
   z-index: 10;
 }
 
 header h1 {
   margin: 5px 0;
-  font-size: 24px;
+  font-size: 28px;
+  color: #333;
 }
 
-header #concellos-search {
-  margin: 10px 0;
-  padding: 5px;
-  width: 50%;
-  max-width: 300px;
+header select,
+header input {
+  margin: 10px 5px;
+  padding: 10px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
   font-size: 16px;
+  width: 200px;
+  max-width: 300px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  transition: all 0.2s ease-in-out;
+}
+
+header select:hover,
+header input:hover {
+  border-color: #007bff;
+  box-shadow: 0 2px 6px rgba(0, 123, 255, 0.3);
+}
+
+header select:focus,
+header input:focus {
+  outline: none;
+  border-color: #0056b3;
+  box-shadow: 0 2px 6px rgba(0, 86, 179, 0.4);
 }
 
 header #info {
   margin-top: 5px;
   font-size: 16px;
-  color: #333;
+  color: #666;
+  font-style: italic;
 }
 
+/* Main content */
 main {
-  margin-top: 120px; /* Espacio para el header fijo */
+  margin-top: 140px; /* Espacio para el header fijo */
 }
 
 #map-container {
   display: inline-block;
   margin: 20px auto;
-  width: 80%;
+  width: 90%;
   height: auto;
+  border: 1px solid #ccc;
+  border-radius: 10px;
+  background-color: #ffffff; /* Fondo blanco */
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  padding: 10px;
 }
 
-/* Resaltar parroquia seleccionada */
-path.selected {
-  fill: rgb(79, 138, 167);
-  stroke: black;
-  stroke-width: 0.5px;
-  cursor: pointer;
-}
-
-/* Relleno inicial de las parroquias */
+/* Estilo del mapa */
 path {
-  fill: #ddd;
-  stroke: #000;
+  fill: #e0e0e0; /* Relleno inicial */
+  stroke: #333;
   stroke-width: 0.5px;
-  transition: fill 0.2s;
+  transition: all 0.2s ease-in-out;
 }
 
-/* Hover */
 path:hover {
-  fill: #ffa500;
+  fill: #007bff; /* Azul brillante */
   cursor: pointer;
+  stroke: #0056b3;
+  stroke-width: 1px;
+}
+
+path.selected {
+  fill: rgba(0, 123, 255, 0.7);
+  stroke: #0056b3;
+  stroke-width: 1.5px;
+}
+
+/* Footer */
+footer {
+  margin: 20px 0;
+  font-size: 14px;
+  color: #aaa;
+}
+
+/* Botón de acción (si es necesario) */
+button {
+  padding: 10px 20px;
+  background-color: #007bff;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-size: 16px;
+  cursor: pointer;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  transition: background-color 0.2s ease-in-out, transform 0.2s ease-in-out;
+}
+
+button:hover {
+  background-color: #0056b3;
+  transform: scale(1.05);
+}
+
+button:active {
+  background-color: #004085;
+  transform: scale(0.95);
 }
