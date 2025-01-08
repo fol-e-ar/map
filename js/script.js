@@ -25,7 +25,7 @@ document.addEventListener("DOMContentLoaded", () => {
           });
   
           path.addEventListener("mouseleave", () => {
-            info.textContent = "Pasa el ratón sobre una parroquia...";
+            info.textContent = "Pasa o rato sobre unha parroquia...";
             path.classList.remove("selected");
           });
         });
