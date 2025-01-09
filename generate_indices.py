@@ -12,8 +12,11 @@ def generar_indices():
             with open(f'piezas/{filename}', 'r') as f:
                 md = frontmatter.load(f)
                 piezas.append({
-                    "id": str(md['id']),  # Solo id y ubicación
-                    "location": str(md['location'])
+                    "id": str(md['id']),  # Convertir a string
+                    "title": md['title'],
+                    "location": str(md['location']),  # Convertir a string
+                    "ritmo": md['ritmo'],
+                    "content": md.content.strip()
                 })
 
     # Procesar coplas
@@ -22,8 +25,9 @@ def generar_indices():
             with open(f'coplas/{filename}', 'r') as f:
                 md = frontmatter.load(f)
                 coplas.append({
-                    "id": str(md['id']),  # Solo id y ubicación
-                    "location": str(md['location'])
+                    "id": str(md['id']),  # Convertir a string
+                    "location": str(md['location']),  # Convertir a string
+                    "content": md.content.strip()
                 })
 
     # Guardar índices

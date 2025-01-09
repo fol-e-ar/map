@@ -19,13 +19,11 @@
       <a href="about.html">Sobre Nós</a>
     </nav>
   </header>
-  <nav class="breadcrumb">
-    <a href="provincia.html?id=15">A Coruña</a> >
-    <a href="comarca.html?id=1">Bergantiños</a> >
-    Malpica de Bergantiños
+  <nav class="breadcrumb" id="breadcrumb">
+    <!-- Breadcrumb dinámico -->
   </nav>
   <section>
-    <h2>Parroquias en Malpica de Bergantiños</h2>
+    <h2 id="concello-name">Parroquias en Concello</h2>
     <ul id="parroquias-list">
       <!-- As parroquias cargaranse dinámicamente -->
     </ul>
@@ -76,11 +74,8 @@ def generar_indices():
             with open(f'piezas/{filename}', 'r') as f:
                 md = frontmatter.load(f)
                 piezas.append({
-                    "id": md['id'],
-                    "title": md['title'],
-                    "location": md['location'],
-                    "ritmo": md['ritmo'],
-                    "content": md.content.strip()
+                    "id": str(md['id']),  # Solo id y ubicación
+                    "location": str(md['location'])
                 })
 
     # Procesar coplas
@@ -89,9 +84,8 @@ def generar_indices():
             with open(f'coplas/{filename}', 'r') as f:
                 md = frontmatter.load(f)
                 coplas.append({
-                    "id": md['id'],
-                    "location": md['location'],
-                    "content": md.content.strip()
+                    "id": str(md['id']),  # Solo id y ubicación
+                    "location": str(md['location'])
                 })
 
     # Guardar índices
@@ -132,6 +126,113 @@ if __name__ == "__main__":
   <div id="map"></div>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="js/mapa.js"></script>
+</body>
+</html>
+
+```
+
+### about.html
+```html
+<!DOCTYPE html>
+<html lang="gl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sobre Nós - Tradición Oral Galega</title>
+    <style>
+        body {
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background: #f5f5f7;
+            color: #1d1d1f;
+            line-height: 1.6;
+        }
+
+        header {
+            background: #ffffff;
+            border-bottom: 1px solid #d2d2d7;
+            padding: 20px 0;
+            text-align: center;
+        }
+
+        header h1 {
+            font-size: 2rem;
+            font-weight: 600;
+            margin: 0;
+        }
+
+        header p {
+            font-size: 1.1rem;
+            color: #86868b;
+            margin: 0;
+            margin-top: 8px;
+        }
+
+        main {
+            max-width: 700px;
+            margin: 40px auto;
+            padding: 0 20px;
+            text-align: center;
+        }
+
+        main h2 {
+            font-size: 1.8rem;
+            font-weight: 600;
+            color: #1d1d1f;
+            margin-bottom: 20px;
+        }
+
+        main p {
+            font-size: 1.2rem;
+            margin-bottom: 20px;
+            color: #424245;
+        }
+
+        footer {
+            background: #f5f5f7;
+            border-top: 1px solid #d2d2d7;
+            padding: 20px 0;
+            text-align: center;
+            margin-top: 40px;
+        }
+
+        footer p {
+            font-size: 1rem;
+            color: #86868b;
+            margin: 0;
+        }
+
+        footer a {
+            color: #0071e3;
+            text-decoration: none;
+        }
+
+        footer a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Sobre Nós</h1>
+        <p>A nosa paixón pola tradición oral galega</p>
+    </header>
+
+    <main>
+        <h2>Quen somos?</h2>
+        <p>Somos un grupo de persoas apaixonadas pola riqueza cultural de Galicia. Apreciamos as coplas, lendas e contos que forman parte da nosa tradición oral e queremos axudar a preservalos.</p>
+
+        <h2>O noso obxectivo</h2>
+        <p>Construír un repositorio único que recolla e documente a distribución xeográfica das pezas tradicionais galegas. Queremos que este espazo sexa útil para toda a comunidade e promova o coñecemento e a valoración do noso patrimonio cultural.</p>
+
+        <h2>Por que o facemos?</h2>
+        <p>A tradición oral é un tesouro que merece ser coidado e transmitido. Ao rexistrarmos estas pezas, non só honramos o pasado, senón que tamén aseguramos que futuras xeracións poidan desfrutar e aprender delas.</p>
+    </main>
+
+    <footer>
+        <p>&copy; 2025 Tradición Oral Galega | <a href="#">Contacta connosco</a></p>
+    </footer>
 </body>
 </html>
 
@@ -201,11 +302,24 @@ if __name__ == "__main__":
 ```markdown
 ---
 id: "001"
-location: 1504303
+location: "1504303"
 ---
 
 Copla:
 Malpica ten no seu porto  
+barquiños de velas brancas.
+
+```
+
+### coplas/002.md
+```markdown
+---
+id: "002"
+location: "1504303"
+---
+
+Copla:
+AAAA Malpica ten no seu porto  
 barquiños de velas brancas.
 
 ```
@@ -356,6 +470,12 @@ footer {
   position: fixed;
   bottom: 0;
   width: 100%;
+}
+
+#map {
+  width: 100%;
+  height: calc(100vh - 80px); /* Ajuste para dejar espacio para la cabecera */
+  margin-top: 10px;
 }
 
 ```
@@ -547,17 +667,21 @@ fetch('assets/parroquias.geojson')
 const urlParams = new URLSearchParams(window.location.search);
 const concelloId = urlParams.get('id');
 
-// Generar breadcrumb dinámico
+// Generar breadcrumb dinámico y el nombre del concello
 fetch('assets/mapeo.json')
   .then((response) => response.json())
   .then((data) => {
     const concello = data.find((p) => p.codigo_concello === concelloId);
     if (concello) {
-      document.querySelector('.breadcrumb').innerHTML = `
+      // Generar el breadcrumb
+      document.querySelector('#breadcrumb').innerHTML = `
         <a href="provincia.html?id=${concello.codigo_provincia}">${concello.provincia}</a> >
         <a href="comarca.html?id=${concello.codigo_comarca}">${concello.comarca}</a> >
         ${concello.concello}
       `;
+
+      // Actualizar el título del concello
+      document.querySelector('#concello-name').innerText = `Parroquias en ${concello.concello}`;
     }
   });
 
@@ -582,31 +706,63 @@ fetch('assets/piezas.json')
 
     const tableBody = document.querySelector('#piezas-table tbody');
     piezas.forEach((pieza) => {
-      const row = `
-        <tr>
-          <td>${pieza.title}</td>
-          <td>${pieza.ritmo}</td>
-          <td><a href="pieza.html?id=${pieza.id}">Ver</a></td>
-        </tr>
-      `;
-      tableBody.innerHTML += row;
+      // Usar el id para buscar y renderizar dinámicamente el contenido del archivo Markdown
+      fetch(`piezas/${pieza.id}.md`)
+        .then((response) => response.text())
+        .then((markdown) => {
+          // Obtener título y ritmo del frontmatter
+          const titleMatch = markdown.match(/title:\s*(.+)/);
+          const ritmoMatch = markdown.match(/ritmo:\s*(.+)/);
+
+          const title = titleMatch ? titleMatch[1] : "Descoñecido";
+          const ritmo = ritmoMatch ? ritmoMatch[1] : "Descoñecido";
+
+          const row = `
+            <tr>
+              <td>${title}</td>
+              <td>${ritmo}</td>
+              <td><a href="pieza.html?id=${pieza.id}">Ver</a></td>
+            </tr>
+          `;
+          tableBody.innerHTML += row;
+        });
     });
 
     // Filtro por ritmo
     document.querySelector('#filter-ritmo').addEventListener('change', (e) => {
       const selectedRitmo = e.target.value;
-      const filtered = selectedRitmo === 'all' ? piezas : piezas.filter((p) => p.ritmo === selectedRitmo);
+      tableBody.innerHTML = ''; // Limpiar la tabla antes de aplicar el filtro
 
-      tableBody.innerHTML = '';
+      const filtered = selectedRitmo === 'all'
+        ? piezas
+        : piezas.filter((pieza) => {
+            // Volver a cargar el contenido Markdown para filtrar
+            const markdown = fetch(`piezas/${pieza.id}.md`).then((response) => response.text());
+            const ritmoMatch = markdown.match(/ritmo:\s*(.+)/);
+            const ritmo = ritmoMatch ? ritmoMatch[1] : "Descoñecido";
+            return ritmo === selectedRitmo;
+          });
+
+      // Renderizar las piezas filtradas
       filtered.forEach((pieza) => {
-        const row = `
-          <tr>
-            <td>${pieza.title}</td>
-            <td>${pieza.ritmo}</td>
-            <td><a href="pieza.html?id=${pieza.id}">Ver</a></td>
-          </tr>
-        `;
-        tableBody.innerHTML += row;
+        fetch(`piezas/${pieza.id}.md`)
+          .then((response) => response.text())
+          .then((markdown) => {
+            const titleMatch = markdown.match(/title:\s*(.+)/);
+            const ritmoMatch = markdown.match(/ritmo:\s*(.+)/);
+
+            const title = titleMatch ? titleMatch[1] : "Descoñecido";
+            const ritmo = ritmoMatch ? ritmoMatch[1] : "Descoñecido";
+
+            const row = `
+              <tr>
+                <td>${title}</td>
+                <td>${ritmo}</td>
+                <td><a href="pieza.html?id=${pieza.id}">Ver</a></td>
+              </tr>
+            `;
+            tableBody.innerHTML += row;
+          });
       });
     });
   });
@@ -667,62 +823,33 @@ fetch('assets/piezas.json')
 
 ```
 
-### assets/parroquias.geojson
-```json
-{
-  "type": "FeatureCollection",
-  "features": [
-    {
-      "type": "Feature",
-      "geometry": {
+### .git/config
+```
+[core]
+	repositoryformatversion = 0
+	filemode = true
+	bare = false
+	logallrefupdates = true
+	ignorecase = true
+	precomposeunicode = true
+[remote "origin"]
+	url = git@github.com-personal:fol-e-ar/map.git
+	fetch = +refs/heads/*:refs/remotes/origin/*
+[branch "main"]
+	remote = origin
+	merge = refs/heads/main
 
 ```
 
-### assets/mapeo.json
-```json
-[
-    {
-        "id": "3200301",
-        "name": "A Arnoia (San Salvador)",
-        "concello": "Arn
+### .git/HEAD
+```
+ref: refs/heads/main
+
 ```
 
-### assets/coplas.json
-```json
-[
-  {
-    "id": "001",
-    "location": 1500707,
-    "content": "Copla:\nMalpica ten no seu porto  \nbarquiños de velas brancas."
-  }
-]
+### .git/description
 ```
-
-### assets/piezas.json
-```json
-[
-  {
-    "id": "001",
-    "title": "Muiñeira de Cambre",
-    "location": 1504303,
-    "ritmo": "muiñeira",
-    "content": "Letra:\nDunha noite de luar,  \nmuiñeiriña se foi bailar..."
-  }
-]
-```
-
-### piezas/001.md
-```markdown
----
-id: "001"
-title: Muiñeira de Cambre
-location: 1504303
-ritmo: muiñeira
----
-
-Letra:
-Dunha noite de luar,  
-muiñeiriña se foi bailar...
+Unnamed repository; edit this file 'description' to name the repository.
 
 ```
 
