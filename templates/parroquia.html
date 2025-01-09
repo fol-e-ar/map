@@ -1,34 +1,45 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="gl">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Parroquia</title>
-  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="/css/style.css">
 </head>
 <body>
-  <div id="contenido"></div>
-
-  <script>
-    const urlParams = new URLSearchParams(window.location.search);
-    const parroquiaId = urlParams.get('id');
-
-    fetch('assets/mapeo.json')
-      .then((response) => response.json())
-      .then((data) => {
-        const parroquia = data.find((p) => p.id === parroquiaId);
-        if (parroquia) {
-          document.getElementById('contenido').innerHTML = `
-            <h1>${parroquia.name}</h1>
-            <p><strong>Concello:</strong> <a href="concello.html?id=${parroquia.codigo_concello}">${parroquia.concello}</a></p>
-            <p><strong>Comarca:</strong> <a href="comarca.html?id=${parroquia.codigo_comarca}">${parroquia.comarca}</a></p>
-            <p><strong>Provincia:</strong> <a href="provincia.html?id=${parroquia.codigo_provincia}">${parroquia.provincia}</a></p>
-          `;
-        } else {
-          document.getElementById('contenido').innerHTML = '<p>Parroquia no encontrada.</p>';
-        }
-      })
-      .catch((error) => console.error('Error al cargar mapeo.json:', error));
-  </script>
+  <header>
+    <div class="logo">
+      <img src="/assets/logo.png" alt="Fol e Ar" onclick="window.location.href='/index.html'">
+      <h1>fol e ar</h1>
+    </div>
+  </header>
+  <nav class="breadcrumb" id="breadcrumb">
+    <!-- Breadcrumb dinámico -->
+  </nav>
+  <section>
+    <h2>Pezas Musicais</h2>
+    <div class="filters">
+      <label for="filter-ritmo">Filtrar por ritmo:</label>
+      <select id="filter-ritmo">
+        <option value="all">Todos os ritmos</option>
+        <option value="muiñeira">Muiñeiras</option>
+        <option value="xota">Xotas</option>
+        <!-- Engadir máis ritmos aquí -->
+      </select>
+    </div>
+    <table id="piezas-table">
+      <thead>
+        <tr>
+          <th>Título</th>
+          <th>Ritmo</th>
+          <th>Accións</th>
+        </tr>
+      </thead>
+      <tbody>
+        <!-- Os datos cargaranse dinámicamente -->
+      </tbody>
+    </table>
+  </section>
+  <script type="module" src="/js/parroquia.js"></script>
 </body>
 </html>

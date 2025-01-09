@@ -6,12 +6,12 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Concello</title>
-  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="/css/style.css">
 </head>
 <body>
   <header>
     <div class="logo">
-      <img src="assets/logo.png" alt="Fol e Ar" onclick="window.location.href='index.html'">
+      <img src="assets/logo.png" alt="Fol e Ar" onclick="window.location.href=''">
       <h1>Fol e Ar</h1>
     </div>
     <nav>
@@ -34,8 +34,8 @@
       <label for="filter-ritmo">Filtrar por ritmo:</label>
       <select id="filter-ritmo">
         <option value="all">Todas as pezas</option>
-        <option value="muiñeira">Muiñeiras</option>
-        <option value="xota">Xotas</option>
+        <option value="Muiñeira">Muiñeiras</option>
+        <option value="Xota">Xotas</option>
         <!-- Engadir máis ritmos aquí -->
       </select>
     </div>
@@ -52,7 +52,7 @@
       </tbody>
     </table>
   </section>
-  <script src="js/concello.js"></script>
+  <script src="/js/concello.js"></script>
 </body>
 </html>
 
@@ -74,8 +74,11 @@ def generar_indices():
             with open(f'piezas/{filename}', 'r') as f:
                 md = frontmatter.load(f)
                 piezas.append({
-                    "id": str(md['id']),  # Solo id y ubicación
-                    "location": str(md['location'])
+                    "id": str(md['id']),  # Convertir a string
+                    "title": md['title'],
+                    "location": str(md['location']),  # Convertir a string
+                    "ritmo": md['ritmo'],
+                    "content": md.content.strip()
                 })
 
     # Procesar coplas
@@ -84,15 +87,16 @@ def generar_indices():
             with open(f'coplas/{filename}', 'r') as f:
                 md = frontmatter.load(f)
                 coplas.append({
-                    "id": str(md['id']),  # Solo id y ubicación
-                    "location": str(md['location'])
+                    "id": str(md['id']),  # Convertir a string
+                    "location": str(md['location']),  # Convertir a string
+                    "content": md.content.strip()
                 })
 
     # Guardar índices
-    with open('assets/piezas.json', 'w') as f:
+    with open('/assets/piezas.json', 'w') as f:
         json.dump(piezas, f, ensure_ascii=False, indent=2)
 
-    with open('assets/coplas.json', 'w') as f:
+    with open('/assets/coplas.json', 'w') as f:
         json.dump(coplas, f, ensure_ascii=False, indent=2)
 
 if __name__ == "__main__":
@@ -125,7 +129,7 @@ if __name__ == "__main__":
   </header>
   <div id="map"></div>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="js/mapa.js"></script>
+  <script src="/js/mapa.js"></script>
 </body>
 </html>
 
@@ -251,7 +255,7 @@ if __name__ == "__main__":
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Parroquia</title>
-  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="/css/style.css">
 </head>
 <body>
   <header>
@@ -287,7 +291,7 @@ if __name__ == "__main__":
       </tbody>
     </table>
   </section>
-  <script src="js/parroquia.js"></script>
+  <script src="/js/parroquia.js"></script>
 </body>
 </html>
 
@@ -331,151 +335,169 @@ body, html {
   margin: 0;
   padding: 0;
   height: 100%;
-  font-family: 'Helvetica Neue', Arial, sans-serif;
+  font-family: 'Arial', sans-serif;
   line-height: 1.6;
-  background-color: #f8f9fa;
+  background-color: #ffffff;
   color: #333;
 }
 
 /* Cabecera */
 header {
-  padding: 10px 20px;
-  background-color: #006666;
-  color: white;
-  box-shadow: 0px 2px 5px rgba(0, 0, 0, 0.1);
+  padding: 15px 20px;
+  background-color: #1e293b; /* Azul oscuro */
+  color: #ffffff;
   display: flex;
   justify-content: space-between;
   align-items: center;
+  border-bottom: 2px solid #334155;
 }
 
 header h1 {
   margin: 0;
   font-size: 1.8rem;
+  color: #e2e8f0; /* Gris claro */
 }
 
 header .logo {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 15px;
 }
 
 header .logo img {
-  height: 40px;
+  height: 50px;
   cursor: pointer;
 }
 
 header nav {
   display: flex;
-  gap: 10px;
+  gap: 15px;
 }
 
 header nav a {
-  color: #dcdcdc;
+  color: #94a3b8; /* Gris medio */
   text-decoration: none;
   font-size: 1rem;
+  transition: color 0.3s;
 }
 
 header nav a:hover {
-  color: white;
+  color: #f1f5f9; /* Blanco claro */
 }
 
 /* Breadcrumb */
 .breadcrumb {
-  font-size: 0.9rem;
-  margin: 10px 20px;
-  color: #6c757d;
+  font-size: 1rem;
+  margin: 15px 20px;
+  color: #475569; /* Gris oscuro */
 }
 
 .breadcrumb a {
-  color: #006666;
+  color: #2563eb; /* Azul vibrante */
   text-decoration: none;
+  transition: color 0.3s;
 }
 
 .breadcrumb a:hover {
+  color: #1d4ed8; /* Azul más oscuro */
   text-decoration: underline;
 }
 
 /* Filtros */
 .filters {
-  margin: 15px 20px;
+  margin: 20px 20px;
+  display: flex;
+  align-items: center;
+  gap: 15px;
 }
 
 .filters label {
-  margin-right: 10px;
   font-weight: bold;
+  font-size: 1rem;
+  color: #1e293b; /* Azul oscuro */
 }
 
 .filters select {
-  padding: 5px;
+  padding: 10px;
   font-size: 1rem;
-  border: 1px solid #ccc;
+  border: 1px solid #94a3b8;
   border-radius: 5px;
+  background-color: #f1f5f9;
+  color: #1e293b;
 }
 
 /* Tablas */
 table {
   width: 100%;
   border-collapse: collapse;
-  margin: 15px 0;
-  background-color: white;
-  box-shadow: 0px 2px 5px rgba(0, 0, 0, 0.1);
+  margin: 20px 0;
+  background-color: #f8fafc;
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0px 5px 10px rgba(0, 0, 0, 0.1);
 }
 
 table th, table td {
-  border: 1px solid #ddd;
-  padding: 10px;
+  border: none;
+  padding: 15px;
   text-align: left;
 }
 
 table th {
-  background-color: #006666;
-  color: white;
+  background-color: #1e293b; /* Azul oscuro */
+  color: #ffffff;
+  text-transform: uppercase;
 }
 
 table tr:nth-child(even) {
-  background-color: #f4f4f4;
+  background-color: #e2e8f0; /* Gris claro */
 }
 
 table tr:hover {
-  background-color: #eaeaea;
+  background-color: #cbd5e1; /* Gris más claro */
 }
 
 /* Listas */
 ul {
   list-style: none;
   padding: 0;
-  margin: 15px 20px;
+  margin: 20px 20px;
 }
 
 ul li {
-  margin: 5px 0;
+  margin: 10px 0;
+  font-size: 1rem;
 }
 
 ul li a {
-  color: #006666;
+  color: #2563eb; /* Azul vibrante */
   text-decoration: none;
+  transition: color 0.3s;
 }
 
 ul li a:hover {
-  text-decoration: underline;
+  color: #1d4ed8; /* Azul más oscuro */
 }
 
-/* Footer opcional */
+/* Footer */
 footer {
   text-align: center;
-  padding: 10px 20px;
-  background-color: #006666;
-  color: white;
-  font-size: 0.8rem;
+  padding: 15px 20px;
+  background-color: #1e293b;
+  color: #f1f5f9; /* Blanco claro */
+  font-size: 0.9rem;
   position: fixed;
   bottom: 0;
   width: 100%;
 }
 
+/* Mapa */
 #map {
   width: 100%;
   height: calc(100vh - 80px); /* Ajuste para dejar espacio para la cabecera */
   margin-top: 10px;
+  border: 2px solid #94a3b8; /* Borde gris */
+  border-radius: 10px;
 }
 
 ```
@@ -513,7 +535,7 @@ const hoverStyle = {
 };
 
 // Cargar el GeoJSON reproyectado
-fetch('assets/parroquias.geojson')
+fetch('/assets/parroquias.geojson')
   .then((response) => response.json())
   .then((geoData) => {
     L.geoJSON(geoData, {
@@ -543,7 +565,7 @@ fetch('assets/parroquias.geojson')
 const urlParams = new URLSearchParams(window.location.search);
 const parroquiaId = urlParams.get('id');
 
-fetch('assets/mapeo.json')
+fetch('/assets/mapeo.json')
   .then((response) => response.json())
   .then((data) => {
     // Encuentra la parroquia por el ID
@@ -562,7 +584,7 @@ fetch('assets/mapeo.json')
   });
 
 // Mostrar piezas asociadas a la parroquia
-fetch('assets/piezas.json')
+fetch('/assets/piezas.json')
   .then((response) => response.json())
   .then((data) => {
     const piezas = data.filter((pieza) => pieza.location === parroquiaId);
@@ -633,7 +655,7 @@ const hoverStyle = {
 };
 
 // Cargar el GeoJSON reproyectado
-fetch('assets/parroquias.geojson')
+fetch('/assets/parroquias.geojson')
   .then((response) => response.json())
   .then((geoData) => {
     // Añadir las parroquias al mapa
@@ -668,7 +690,7 @@ const urlParams = new URLSearchParams(window.location.search);
 const concelloId = urlParams.get('id');
 
 // Generar breadcrumb dinámico y el nombre del concello
-fetch('assets/mapeo.json')
+fetch('/assets/mapeo.json')
   .then((response) => response.json())
   .then((data) => {
     const concello = data.find((p) => p.codigo_concello === concelloId);
@@ -686,7 +708,7 @@ fetch('assets/mapeo.json')
   });
 
 // Mostrar parroquias en el concello
-fetch('assets/mapeo.json')
+fetch('/assets/mapeo.json')
   .then((response) => response.json())
   .then((data) => {
     const parroquias = data.filter((p) => p.codigo_concello === concelloId);
@@ -699,7 +721,7 @@ fetch('assets/mapeo.json')
   });
 
 // Mostrar piezas asociadas al concello o sus parroquias
-fetch('assets/piezas.json')
+fetch('/assets/piezas.json')
   .then((response) => response.json())
   .then((data) => {
     const piezas = data.filter((pieza) => pieza.location.startsWith(concelloId));
@@ -787,7 +809,7 @@ fetch('assets/piezas.json')
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Parroquia</title>
-  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="/css/style.css">
 </head>
 <body>
   <div id="contenido"></div>
@@ -796,7 +818,7 @@ fetch('assets/piezas.json')
     const urlParams = new URLSearchParams(window.location.search);
     const parroquiaId = urlParams.get('id');
 
-    fetch('assets/mapeo.json')
+    fetch('/assets/mapeo.json')
       .then((response) => response.json())
       .then((data) => {
         const parroquia = data.find((p) => p.id === parroquiaId);

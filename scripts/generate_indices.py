@@ -31,10 +31,10 @@ def generar_indices():
                 })
 
     # Guardar índices
-    with open('assets/piezas.json', 'w') as f:
+    with open('/assets/piezas.json', 'w') as f:
         json.dump(piezas, f, ensure_ascii=False, indent=2)
 
-    with open('assets/coplas.json', 'w') as f:
+    with open('/assets/coplas.json', 'w') as f:
         json.dump(coplas, f, ensure_ascii=False, indent=2)
 
 if __name__ == "__main__":

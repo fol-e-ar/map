@@ -29,7 +29,7 @@ const hoverStyle = {
 };
 
 // Cargar el GeoJSON reproyectado
-fetch('assets/parroquias.geojson')
+fetch('/assets/parroquias.geojson')
   .then((response) => response.json())
   .then((geoData) => {
     L.geoJSON(geoData, {
@@ -39,10 +39,10 @@ fetch('assets/parroquias.geojson')
 
         // Añadir un popup con enlaces a las páginas de las entidades
         layer.bindPopup(`
-          <strong>Parroquia:</strong> <a href="parroquia.html?id=${props.CODPARRO}">${props.PARROQUIA}</a><br>
-          <strong>Concello:</strong> <a href="concello.html?id=${props.CODCONC}">${props.CONCELLO}</a><br>
-          <strong>Comarca:</strong> <a href="comarca.html?id=${props.CODCOM}">${props.COMARCA}</a><br>
-          <strong>Provincia:</strong> <a href="provincia.html?id=${props.CODPROV}">${props.PROVINCIA}</a>
+          <strong>Parroquia:</strong> <a href="/templates/parroquia.html?id=${props.CODPARRO}">${props.PARROQUIA}</a><br>
+          <strong>Concello:</strong> <a href="/templates/concello.html?id=${props.CODCONC}">${props.CONCELLO}</a><br>
+          <strong>Comarca:</strong> <a href="/templates/comarca.html?id=${props.CODCOM}">${props.COMARCA}</a><br>
+          <strong>Provincia:</strong> <a href="/templates/provincia.html?id=${props.CODPROV}">${props.PROVINCIA}</a>
         `);
 
         layer.on('mouseover', () => layer.setStyle(hoverStyle));
