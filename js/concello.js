@@ -15,7 +15,13 @@ fetch('/map/assets/mapeo.json')
         { name: concello.concello, url: '#' },
       ]);
       document.querySelector('#concello-name').innerText = `Parroquias en ${concello.concello}`;
+    } else {
+      document.querySelector('#concello-name').innerText = 'Concello non atopado';
     }
+  })
+  .catch((error) => {
+    console.error('Error ao cargar os datos do concello:', error);
+    document.querySelector('#concello-name').innerText = 'Erro ao cargar o concello';
   });
 
 // Mostrar parroquias en el concello
@@ -25,21 +31,32 @@ fetch('/map/assets/mapeo.json')
     const parroquias = data.filter((p) => p.codigo_concello === concelloId);
 
     const list = document.querySelector('#parroquias-list');
-    list.innerHTML = parroquias
-      .map((p) => `<li><a href="parroquia.html?id=${p.id}">${p.name}</a></li>`)
-      .join('');
+    if (parroquias.length > 0) {
+      list.innerHTML = parroquias
+        .map((p) => `<li><a href="parroquia.html?id=${p.id}">${p.name}</a></li>`)
+        .join('');
+    } else {
+      list.innerHTML = '<li>Non hai parroquias rexistradas neste concello.</li>';
+    }
+  })
+  .catch((error) => {
+    console.error('Error ao cargar as parroquias:', error);
+    document.querySelector('#parroquias-list').innerHTML = '<li>Erro ao cargar as parroquias.</li>';
   });
 
 // Mostrar piezas asociadas al concello
-fetch('assets/piezas.json')
+fetch('/map/assets/piezas.json')
   .then((response) => response.json())
   .then((data) => {
     const piezas = data.filter((pieza) => pieza.location.startsWith(concelloId));
 
-    // Renderizar la tabla con un override para la columna "id"
-    renderTable('#piezas-table', piezas, ['title', 'ritmo', 'id'], {
-      id: (id) => `<a href="pieza.html?id=${id}">Ver</a>`, // Personaliza la columna "id"
-    });
+    if (piezas.length > 0) {
+      renderTable('#piezas-table', piezas, ['title', 'ritmo', 'id'], {
+        id: (id) => `<a href="pieza.html?id=${id}">Ver</a>`,
+      });
+    } else {
+      document.querySelector('#piezas-table tbody').innerHTML = '<tr><td colspan="3">Non hai pezas rexistradas neste concello.</td></tr>';
+    }
 
     // Filtro de ritmos
     document.querySelector('#filter-ritmo').addEventListener('change', (e) => {
@@ -49,5 +66,8 @@ fetch('assets/piezas.json')
         id: (id) => `<a href="pieza.html?id=${id}">Ver</a>`,
       });
     });
+  })
+  .catch((error) => {
+    console.error('Error ao cargar as pezas:', error);
+    document.querySelector('#piezas-table tbody').innerHTML = '<tr><td colspan="3">Erro ao cargar as pezas.</td></tr>';
   });
-
