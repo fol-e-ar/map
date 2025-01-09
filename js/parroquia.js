@@ -4,22 +4,22 @@ const urlParams = new URLSearchParams(window.location.search);
 const parroquiaId = urlParams.get('id');
 
 // Cargar los datos de la parroquia
-fetch('/assets/mapeo.json')
+fetch('assets/mapeo.json')
   .then((response) => response.json())
   .then((data) => {
     const parroquia = data.find((p) => p.id === parroquiaId);
     if (parroquia) {
       generateBreadcrumb('#breadcrumb', [
-        { name: parroquia.provincia, url: `/templates/provincia.html?id=${parroquia.codigo_provincia}` },
-        { name: parroquia.comarca, url: `/templates/comarca.html?id=${parroquia.codigo_comarca}` },
-        { name: parroquia.concello, url: `/templates/concello.html?id=${parroquia.codigo_concello}` },
+        { name: parroquia.provincia, url: `templates/provincia.html?id=${parroquia.codigo_provincia}` },
+        { name: parroquia.comarca, url: `templates/comarca.html?id=${parroquia.codigo_comarca}` },
+        { name: parroquia.concello, url: `templates/concello.html?id=${parroquia.codigo_concello}` },
         { name: parroquia.name, url: '#' },
       ]);
     }
   });
 
 // Cargar las piezas musicales asociadas
-fetch('/assets/piezas.json')
+fetch('assets/piezas.json')
   .then((response) => response.json())
   .then((data) => {
     const piezas = data.filter((pieza) => pieza.location === parroquiaId);

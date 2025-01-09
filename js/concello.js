@@ -4,7 +4,7 @@ const urlParams = new URLSearchParams(window.location.search);
 const concelloId = urlParams.get('id');
 
 // Cargar los datos del concello
-fetch('/assets/mapeo.json')
+fetch('assets/mapeo.json')
   .then((response) => response.json())
   .then((data) => {
     const concello = data.find((c) => c.codigo_concello === concelloId);
@@ -19,7 +19,7 @@ fetch('/assets/mapeo.json')
   });
 
 // Mostrar parroquias en el concello
-fetch('/assets/mapeo.json')
+fetch('/mapeo.json')
   .then((response) => response.json())
   .then((data) => {
     const parroquias = data.filter((p) => p.codigo_concello === concelloId);
@@ -31,7 +31,7 @@ fetch('/assets/mapeo.json')
   });
 
 // Mostrar piezas asociadas al concello
-fetch('/assets/piezas.json')
+fetch('assets/piezas.json')
   .then((response) => response.json())
   .then((data) => {
     const piezas = data.filter((pieza) => pieza.location.startsWith(concelloId));

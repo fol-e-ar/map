@@ -4,13 +4,13 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>mapa - fol e ar</title>
-  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="css/style.css">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 </head>
 <body>
   <header>
     <div class="logo">
-      <img src="/assets/logo.png" alt="fol e ar" onclick="window.location.href='/index.html'">
+      <img src="assets/logo.png" alt="fol e ar" onclick="window.location.href='/index.html'">
       <h1>fol e ar</h1>
     </div>
     <nav>
@@ -50,7 +50,7 @@
     };
 
     // Cargar GeoJSON y añadir popups con enlaces
-    fetch('/assets/parroquias.geojson')
+    fetch('assets/parroquias.geojson')
       .then((response) => response.json())
       .then((geoData) => {
         L.geoJSON(geoData, {
@@ -60,10 +60,10 @@
 
             // Añadir un popup con enlaces dinámicos
             layer.bindPopup(`
-              <strong>Parroquia:</strong> <a href="/templates/parroquia.html?id=${props.CODPARRO}">${props.PARROQUIA}</a><br>
-              <strong>Concello:</strong> <a href="/templates/concello.html?id=${props.CODCONC}">${props.CONCELLO}</a><br>
-              <strong>Comarca:</strong> <a href="/templates/comarca.html?id=${props.CODCOM}">${props.COMARCA}</a><br>
-              <strong>Provincia:</strong> <a href="/templates/provincia.html?id=${props.CODPROV}">${props.PROVINCIA}</a>
+              <strong>Parroquia:</strong> <a href="templates/parroquia.html?id=${props.CODPARRO}">${props.PARROQUIA}</a><br>
+              <strong>Concello:</strong> <a href="templates/concello.html?id=${props.CODCONC}">${props.CONCELLO}</a><br>
+              <strong>Comarca:</strong> <a href="templates/comarca.html?id=${props.CODCOM}">${props.COMARCA}</a><br>
+              <strong>Provincia:</strong> <a href="templates/provincia.html?id=${props.CODPROV}">${props.PROVINCIA}</a>
             `);
 
             // Estilo on-hover

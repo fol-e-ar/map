@@ -5,7 +5,7 @@ const piezaId = urlParams.get('id');
 
 console.log('Pieza ID:', piezaId); // Verifica si la URL tiene el ID correcto
 
-fetch('/assets/piezas.json')
+fetch('assets/piezas.json')
   .then((response) => response.json())
   .then((data) => {
     const pieza = data.find((p) => p.id === piezaId);
@@ -24,10 +24,10 @@ fetch('/assets/piezas.json')
 
           // Generar breadcrumb
           generateBreadcrumb('#breadcrumb', [
-            { name: 'Provincia', url: `/templates/provincia.html?id=15` },
-            { name: 'Comarca', url: `/templates/comarca.html?id=1501` },
-            { name: 'Concello', url: `/templates/concello.html?id=150101` },
-            { name: 'Parroquia', url: `/templates/parroquia.html?id=15010101` },
+            { name: 'Provincia', url: `templates/provincia.html?id=15` },
+            { name: 'Comarca', url: `templates/comarca.html?id=1501` },
+            { name: 'Concello', url: `templates/concello.html?id=150101` },
+            { name: 'Parroquia', url: `templates/parroquia.html?id=15010101` },
             { name: pieza.title, url: '#' },
           ]);
         });
