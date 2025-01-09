@@ -19,7 +19,7 @@ fetch('assets/mapeo.json')
   });
 
 // Mostrar parroquias en el concello
-fetch('/mapeo.json')
+fetch('assets/mapeo.json')
   .then((response) => response.json())
   .then((data) => {
     const parroquias = data.filter((p) => p.codigo_concello === concelloId);
