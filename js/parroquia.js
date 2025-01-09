@@ -10,11 +10,12 @@ fetch('../assets/mapeo.json')
     const parroquia = data.find((p) => p.id === parroquiaId);
     if (parroquia) {
       generateBreadcrumb('#breadcrumb', [
-        { name: parroquia.provincia, url: `templates/provincia.html?id=${parroquia.codigo_provincia}` },
-        { name: parroquia.comarca, url: `templates/comarca.html?id=${parroquia.codigo_comarca}` },
-        { name: parroquia.concello, url: `templates/concello.html?id=${parroquia.codigo_concello}` },
+        { name: parroquia.provincia, url: '../templates/provincia.html?id=' + parroquia.codigo_provincia },
+        { name: parroquia.comarca, url: '../templates/comarca.html?id=' + parroquia.codigo_comarca },
+        { name: parroquia.concello, url: '../templates/concello.html?id=' + parroquia.codigo_concello },
         { name: parroquia.name, url: '#' },
       ]);
+      
     }
   });
 

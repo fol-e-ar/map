@@ -1,8 +1,15 @@
 // Generar breadcrumbs dinámicos
 export function generateBreadcrumb(elementId, breadcrumbData) {
-    const breadcrumb = breadcrumbData.map(({ name, url }) => `<a href="${url}">${name}</a>`).join(' > ');
+    const isLocal = location.hostname === 'localhost' || location.hostname === '[::]';
+    const basePath = isLocal ? '' : '/map';
+  
+    const breadcrumb = breadcrumbData
+      .map(({ name, url }) => `<a href="${basePath}/${url}">${name}</a>`)
+      .join(' > ');
+  
     document.querySelector(elementId).innerHTML = breadcrumb;
-}
+  }
+
   
   // Filtrar datos
   export function filterData(data, key, value) {
