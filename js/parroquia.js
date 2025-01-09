@@ -4,7 +4,7 @@ const urlParams = new URLSearchParams(window.location.search);
 const parroquiaId = urlParams.get('id');
 
 // Cargar los datos de la parroquia
-fetch('assets/mapeo.json')
+fetch('map/assets/mapeo.json')
   .then((response) => response.json())
   .then((data) => {
     const parroquia = data.find((p) => p.id === parroquiaId);
@@ -19,7 +19,7 @@ fetch('assets/mapeo.json')
   });
 
 // Cargar las piezas musicales asociadas
-fetch('assets/piezas.json')
+fetch('map/assets/piezas.json')
   .then((response) => response.json())
   .then((data) => {
     const piezas = data.filter((pieza) => pieza.location === parroquiaId);
