@@ -5,7 +5,7 @@ const piezaId = urlParams.get('id');
 
 console.log('Pieza ID:', piezaId); // Verifica si la URL tiene el ID correcto
 
-fetch('assets/piezas.json')
+fetch('../assets/piezas.json')
   .then((response) => response.json())
   .then((data) => {
     const pieza = data.find((p) => p.id === piezaId);
