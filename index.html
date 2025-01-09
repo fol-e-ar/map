@@ -3,29 +3,24 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Mapa de Parroquias</title>
+  <title>Cancionero Tradicional Gallego</title>
   <link rel="stylesheet" href="css/style.css">
-  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 </head>
 <body>
   <header>
-    <h1>Mapa de Parroquias</h1>
-    <select id="view-selector">
-      <option value="parroquia">Parroquias</option>
-      <option value="concello">Concellos</option>
-      <option value="comarca">Comarcas</option>
-    </select>
-    <input type="text" id="concellos-search" placeholder="Buscar...">
-    <div id="info">Pasa o rato sobre unha parroquia...</div>
+    <h1>Cancionero Tradicional Gallego</h1>
+    <nav>
+      <input type="search" id="search-bar" placeholder="Busca una parroquia, concello o comarca...">
+      <select id="view-mode">
+        <option value="parroquias">Modo Parroquias</option>
+        <option value="concellos">Modo Concellos</option>
+        <option value="comarcas">Modo Comarcas</option>
+      </select>
+    </nav>
   </header>
-  <main>
-    <div id="map-container">
-      <!-- El SVG se cargará aquí -->
-    </div>
-  </main>
-  <footer>
-    <p>2025</p>
-  </footer>
-  <script src="js/script.js"></script>
+  <div id="map"></div>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="js/mapa.js"></script>
 </body>
 </html>

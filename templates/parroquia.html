@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Parroquia</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div id="contenido"></div>
+
+  <script>
+    const urlParams = new URLSearchParams(window.location.search);
+    const parroquiaId = urlParams.get('id');
+
+    fetch('assets/mapeo.json')
+      .then((response) => response.json())
+      .then((data) => {
+        const parroquia = data.find((p) => p.id === parroquiaId);
+        if (parroquia) {
+          document.getElementById('contenido').innerHTML = `
+            <h1>${parroquia.name}</h1>
+            <p><strong>Concello:</strong> <a href="concello.html?id=${parroquia.codigo_concello}">${parroquia.concello}</a></p>
+            <p><strong>Comarca:</strong> <a href="comarca.html?id=${parroquia.codigo_comarca}">${parroquia.comarca}</a></p>
+            <p><strong>Provincia:</strong> <a href="provincia.html?id=${parroquia.codigo_provincia}">${parroquia.provincia}</a></p>
+          `;
+        } else {
+          document.getElementById('contenido').innerHTML = '<p>Parroquia no encontrada.</p>';
+        }
+      })
+      .catch((error) => console.error('Error al cargar mapeo.json:', error));
+  </script>
+</body>
+</html>

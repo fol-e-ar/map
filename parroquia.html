@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="gl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Parroquia</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header>
+    <div class="logo">
+      <img src="assets/logo.png" alt="Fol e Ar" onclick="window.location.href='index.html'">
+      <h1>Fol e Ar</h1>
+    </div>
+  </header>
+  <nav class="breadcrumb" id="breadcrumb">
+    <!-- Breadcrumb dinámico -->
+  </nav>
+  <section>
+    <h2>Pezas Musicais</h2>
+    <div class="filters">
+      <label for="filter-ritmo">Filtrar por ritmo:</label>
+      <select id="filter-ritmo">
+        <option value="all">Todos os ritmos</option>
+        <option value="muiñeira">Muiñeiras</option>
+        <option value="xota">Xotas</option>
+        <!-- Engadir máis ritmos aquí -->
+      </select>
+    </div>
+    <table id="piezas-table">
+      <thead>
+        <tr>
+          <th>Título</th>
+          <th>Ritmo</th>
+          <th>Accións</th>
+        </tr>
+      </thead>
+      <tbody>
+        <!-- Os datos cargaranse dinámicamente -->
+      </tbody>
+    </table>
+  </section>
+  <script src="js/parroquia.js"></script>
+</body>
+</html>

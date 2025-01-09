@@ -1,128 +1,151 @@
-/* General */
-body {
-  font-family: 'Roboto', sans-serif;
+/* Reset básico */
+body, html {
   margin: 0;
   padding: 0;
-  background-color: #f9fafb; /* Fondo suave */
+  height: 100%;
+  font-family: 'Helvetica Neue', Arial, sans-serif;
+  line-height: 1.6;
+  background-color: #f8f9fa;
   color: #333;
-  text-align: center;
 }
 
-/* Header */
+/* Cabecera */
 header {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  background-color: #ffffff; /* Fondo blanco */
-  padding: 10px 0;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  z-index: 10;
+  padding: 10px 20px;
+  background-color: #006666;
+  color: white;
+  box-shadow: 0px 2px 5px rgba(0, 0, 0, 0.1);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
 header h1 {
+  margin: 0;
+  font-size: 1.8rem;
+}
+
+header .logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+header .logo img {
+  height: 40px;
+  cursor: pointer;
+}
+
+header nav {
+  display: flex;
+  gap: 10px;
+}
+
+header nav a {
+  color: #dcdcdc;
+  text-decoration: none;
+  font-size: 1rem;
+}
+
+header nav a:hover {
+  color: white;
+}
+
+/* Breadcrumb */
+.breadcrumb {
+  font-size: 0.9rem;
+  margin: 10px 20px;
+  color: #6c757d;
+}
+
+.breadcrumb a {
+  color: #006666;
+  text-decoration: none;
+}
+
+.breadcrumb a:hover {
+  text-decoration: underline;
+}
+
+/* Filtros */
+.filters {
+  margin: 15px 20px;
+}
+
+.filters label {
+  margin-right: 10px;
+  font-weight: bold;
+}
+
+.filters select {
+  padding: 5px;
+  font-size: 1rem;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+}
+
+/* Tablas */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 15px 0;
+  background-color: white;
+  box-shadow: 0px 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+table th, table td {
+  border: 1px solid #ddd;
+  padding: 10px;
+  text-align: left;
+}
+
+table th {
+  background-color: #006666;
+  color: white;
+}
+
+table tr:nth-child(even) {
+  background-color: #f4f4f4;
+}
+
+table tr:hover {
+  background-color: #eaeaea;
+}
+
+/* Listas */
+ul {
+  list-style: none;
+  padding: 0;
+  margin: 15px 20px;
+}
+
+ul li {
   margin: 5px 0;
-  font-size: 28px;
-  color: #333;
 }
 
-header select,
-header input {
-  margin: 10px 5px;
-  padding: 10px;
-  border: 1px solid #ccc;
-  border-radius: 6px;
-  font-size: 16px;
-  width: 200px;
-  max-width: 300px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  transition: all 0.2s ease-in-out;
+ul li a {
+  color: #006666;
+  text-decoration: none;
 }
 
-header select:hover,
-header input:hover {
-  border-color: #007bff;
-  box-shadow: 0 2px 6px rgba(0, 123, 255, 0.3);
+ul li a:hover {
+  text-decoration: underline;
 }
 
-header select:focus,
-header input:focus {
-  outline: none;
-  border-color: #0056b3;
-  box-shadow: 0 2px 6px rgba(0, 86, 179, 0.4);
-}
-
-header #info {
-  margin-top: 5px;
-  font-size: 16px;
-  color: #666;
-  font-style: italic;
-}
-
-/* Main content */
-main {
-  margin-top: 140px; /* Espacio para el header fijo */
-}
-
-#map-container {
-  display: inline-block;
-  margin: 20px auto;
-  width: 90%;
-  height: auto;
-  border: 1px solid #ccc;
-  border-radius: 10px;
-  background-color: #ffffff; /* Fondo blanco */
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-  padding: 10px;
-}
-
-/* Estilo del mapa */
-path {
-  fill: #e0e0e0; /* Relleno inicial */
-  stroke: #333;
-  stroke-width: 0.5px;
-  transition: all 0.2s ease-in-out;
-}
-
-path:hover {
-  fill: #007bff; /* Azul brillante */
-  cursor: pointer;
-  stroke: #0056b3;
-  stroke-width: 1px;
-}
-
-path.selected {
-  fill: rgba(0, 123, 255, 0.7);
-  stroke: #0056b3;
-  stroke-width: 1.5px;
-}
-
-/* Footer */
+/* Footer opcional */
 footer {
-  margin: 20px 0;
-  font-size: 14px;
-  color: #aaa;
-}
-
-/* Botón de acción (si es necesario) */
-button {
+  text-align: center;
   padding: 10px 20px;
-  background-color: #007bff;
-  color: #fff;
-  border: none;
-  border-radius: 6px;
-  font-size: 16px;
-  cursor: pointer;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  transition: background-color 0.2s ease-in-out, transform 0.2s ease-in-out;
+  background-color: #006666;
+  color: white;
+  font-size: 0.8rem;
+  position: fixed;
+  bottom: 0;
+  width: 100%;
 }
 
-button:hover {
-  background-color: #0056b3;
-  transform: scale(1.05);
-}
-
-button:active {
-  background-color: #004085;
-  transform: scale(0.95);
+#map {
+  width: 100%;
+  height: calc(100vh - 80px); /* Ajuste para dejar espacio para la cabecera */
+  margin-top: 10px;
 }

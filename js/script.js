@@ -1,87 +1,57 @@
-// Espera a que el DOM esté listo
-document.addEventListener("DOMContentLoaded", () => {
-  const mapContainer = document.getElementById("map-container");
-  const info = document.getElementById("info");
-  const searchInput = document.getElementById("concellos-search");
-  const viewSelector = document.getElementById("view-selector");
+// Inicializa el mapa
+const map = L.map('map').setView([42.88, -8.54], 8); // Galicia
 
-  // Cargar el SVG en el contenedor
-  fetch("assets/parroquias_def.svg")
-    .then((response) => response.text())
-    .then((svgContent) => {
-      // Inserta el contenido del SVG en el contenedor
-      mapContainer.innerHTML = svgContent;
+// Añade las capas base
+const baseMaps = {
+  'Plano minimalista': L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { attribution: '&copy; CARTO' }),
+  'Físico': L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { attribution: '&copy; Esri' }),
+  'Só Galiza': L.tileLayer('https://stamen-tiles.a.ssl.fastly.net/toner-lite/{z}/{x}/{y}.png', { attribution: '&copy; Stamen Design' }),
+};
 
-      // Seleccionar todos los paths dentro del mapa
-      const paths = mapContainer.querySelectorAll("path");
+// Establece un basemap inicial
+const defaultBase = baseMaps['Físico'];
+defaultBase.addTo(map);
 
-      // Evento para mostrar info al pasar el ratón
-      paths.forEach((path) => {
-        path.addEventListener("mouseenter", () => {
-          const nomeParroquia = path.getAttribute("data-parroquia");
-          const nomeConcello = path.getAttribute("data-nomeconcel");
-          const nomeComarca = path.getAttribute("data-comarca");
-          info.textContent = `Parroquia: ${nomeParroquia} | Concello: ${nomeConcello} | Comarca: ${nomeComarca}`;
-          path.classList.add("selected");
-        });
+// Añade control de capas
+L.control.layers(baseMaps).addTo(map);
 
-        path.addEventListener("mouseleave", () => {
-          info.textContent = "Pasa o rato sobre unha parroquia...";
-          path.classList.remove("selected");
-        });
-      });
+// Define los estilos
+const defaultStyle = {
+  color: '#444',          // Color de las líneas de las fronteras
+  weight: 0.25,           // Grosor de las líneas
+  fillColor: '#2a7b9b',   // Color de relleno
+  fillOpacity: 0.01,      // Transparencia del relleno
+};
 
-      // Evento de búsqueda dinámica según la vista seleccionada
-      searchInput.addEventListener("input", () => {
-        const query = searchInput.value.toLowerCase();
-        const view = viewSelector.value; // parroquia, concello, comarca
-        const attributeMap = {
-          parroquia: "data-parroquia",
-          concello: "data-nomeconcel",
-          comarca: "data-comarca",
-        };
-        const attribute = attributeMap[view];
+const hoverStyle = {
+  fillColor: '#66d9e8',   // Color de relleno en hover
+  fillOpacity: 0.4,       // Transparencia en hover
+};
 
-        // Reiniciar todas las selecciones
-        paths.forEach((path) => path.classList.remove("selected"));
+// Cargar el GeoJSON reproyectado
+fetch('assets/parroquias.geojson')
+  .then((response) => response.json())
+  .then((geoData) => {
+    // Añadir las parroquias al mapa
+    L.geoJSON(geoData, {
+      style: defaultStyle, // Aplica el estilo inicial a todas las parroquias
+      onEachFeature: (feature, layer) => {
+        const props = feature.properties;
 
-        // Aplicar selección basada en la búsqueda
-        paths.forEach((path) => {
-          const name = path.getAttribute(attribute)?.toLowerCase();
-          if (name && name.includes(query)) {
-            if (view === "comarca") {
-              // Seleccionar todos los elementos de la misma comarca
-              const targetComarca = path.getAttribute("data-comarca");
-              paths.forEach((p) => {
-                if (p.getAttribute("data-comarca") === targetComarca) {
-                  p.classList.add("selected");
-                }
-              });
-            } else if (view === "concello") {
-              // Seleccionar todos los elementos del mismo concello
-              const targetConcello = path.getAttribute("data-nomeconcel");
-              paths.forEach((p) => {
-                if (p.getAttribute("data-nomeconcel") === targetConcello) {
-                  p.classList.add("selected");
-                }
-              });
-            } else {
-              // Seleccionar elementos específicos (parroquia)
-              path.classList.add("selected");
-            }
-          }
-        });
-      });
+        // Añadir un popup con información
+        layer.bindPopup(`
+          <strong>Parroquia:</strong> ${props.PARROQUIA}<br>
+          <strong>Concello:</strong> ${props.CONCELLO}<br>
+          <strong>Comarca:</strong> ${props.COMARCA}<br>
+          <strong>Provincia:</strong> ${props.PROVINCIA}
+        `);
 
-      // Evento para cambiar la vista (Parroquias, Concellos, Comarcas)
-      viewSelector.addEventListener("change", () => {
-        // Resetear selección al cambiar de vista
-        searchInput.value = "";
-        info.textContent = "Pasa o rato sobre unha parroquia...";
-        paths.forEach((path) => {
-          path.classList.remove("selected");
-        });
-      });
-    })
-    .catch((error) => console.error("Error al cargar el SVG:", error));
-});
+        // Cambiar el estilo al pasar el ratón
+        layer.on('mouseover', () => layer.setStyle(hoverStyle));
+
+        // Restaurar el estilo original al salir el ratón
+        layer.on('mouseout', () => layer.setStyle(defaultStyle));
+      },
+    }).addTo(map);
+  })
+  .catch((error) => console.error('Error al cargar GeoJSON:', error));
