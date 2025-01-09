@@ -4,7 +4,7 @@ const urlParams = new URLSearchParams(window.location.search);
 const parroquiaId = urlParams.get('id');
 
 // Cargar los datos de la parroquia
-fetch('map/assets/mapeo.json')
+fetch('/map/assets/mapeo.json')
   .then((response) => response.json())
   .then((data) => {
     const parroquia = data.find((p) => p.id === parroquiaId);
