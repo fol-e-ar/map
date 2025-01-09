@@ -13,7 +13,7 @@ fetch('assets/piezas.json')
 
     if (pieza) {
       // Cargar el archivo Markdown correspondiente
-      return fetch(`/piezas/${pieza.id}.md`)
+      return fetch(`piezas/${pieza.id}.md`)
         .then((response) => response.text())
         .then((markdown) => {
           console.log('Contenido Markdown:', markdown); // Verifica si se carga el contenido del archivo
