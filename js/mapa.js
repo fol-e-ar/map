@@ -23,17 +23,35 @@ const defaultStyle = {
   fillOpacity: 0.01,
 };
 
+const highlightedStyle = {
+  color: '#444',
+  weight: 0.5,
+  fillColor: '#f8c102',
+  fillOpacity: 0.6,
+};
+
 const hoverStyle = {
   fillColor: '#66d9e8',
   fillOpacity: 0.4,
 };
 
-// Cargar el GeoJSON reproyectado
-fetch('assets/parroquias.geojson')
+// Cargar los datos de piezas para identificar ubicaciones registradas
+let highlightedLocations = [];
+fetch('assets/piezas.json')
+  .then((response) => response.json())
+  .then((data) => {
+    highlightedLocations = data.map((pieza) => pieza.location);
+    return fetch('assets/parroquias.geojson');
+  })
   .then((response) => response.json())
   .then((geoData) => {
     L.geoJSON(geoData, {
-      style: defaultStyle,
+      style: (feature) => {
+        const isHighlighted = highlightedLocations.some((loc) =>
+          feature.properties.CODPARRO.startsWith(loc) || feature.properties.CODCONC.startsWith(loc)
+        );
+        return isHighlighted ? highlightedStyle : defaultStyle;
+      },
       onEachFeature: (feature, layer) => {
         const props = feature.properties;
 
@@ -46,8 +64,13 @@ fetch('assets/parroquias.geojson')
         `);
 
         layer.on('mouseover', () => layer.setStyle(hoverStyle));
-        layer.on('mouseout', () => layer.setStyle(defaultStyle));
+        layer.on('mouseout', () => layer.setStyle((feature) => {
+          const isHighlighted = highlightedLocations.some((loc) =>
+            feature.properties.CODPARRO.startsWith(loc) || feature.properties.CODCONC.startsWith(loc)
+          );
+          return isHighlighted ? highlightedStyle : defaultStyle;
+        }));
       },
     }).addTo(map);
   })
-  .catch((error) => console.error('Error al cargar GeoJSON:', error));
+  .catch((error) => console.error('Error al cargar datos o GeoJSON:', error));

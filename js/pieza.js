@@ -30,8 +30,14 @@ fetch(piezasJsonUrl)
     return Promise.all([fetch(piezaMarkdownUrl).then((res) => res.text()), pieza]);
   })
   .then(([markdown, pieza]) => {
-    console.log('Contenido Markdown:', markdown);
-    const html = marked.parse(markdown);
+    console.log('Contenido Markdown antes de procesar:', markdown);
+
+    // Eliminar encabezado YAML
+    const markdownSinEncabezado = markdown.replace(/^---[\s\S]*?---\n/, '');
+    console.log('Contenido Markdown sin encabezado:', markdownSinEncabezado);
+
+    // Convertir Markdown a HTML
+    const html = marked.parse(markdownSinEncabezado);
     document.querySelector('#pieza-content').innerHTML = html;
 
     return fetch(mapeoJsonUrl)
@@ -39,21 +45,34 @@ fetch(piezasJsonUrl)
       .then((mapeo) => ({ mapeo, pieza }));
   })
   .then(({ mapeo, pieza }) => {
-    const parroquia = mapeo.find((p) => p.id === pieza.location);
-    if (!parroquia) {
-      throw new Error(`Parroquia con ID ${pieza.location} no encontrada`);
-    }
+    const isParroquia = mapeo.some((p) => p.id === pieza.location);
+    const isConcello = mapeo.some((p) => p.codigo_concello === pieza.location);
 
-    // Construir breadcrumb con rutas relativas
-    generateBreadcrumb('#breadcrumb', [
-      { name: parroquia.provincia, url: `../templates/provincia.html?id=${parroquia.codigo_provincia}` },
-      { name: parroquia.comarca, url: `../templates/comarca.html?id=${parroquia.codigo_comarca}` },
-      { name: parroquia.concello, url: `../templates/concello.html?id=${parroquia.codigo_concello}` },
-      { name: parroquia.name, url: `../templates/parroquia.html?id=${parroquia.id}` },
-      { name: pieza.title, url: '#' },
-    ]);
+    if (isParroquia) {
+      const parroquia = mapeo.find((p) => p.id === pieza.location);
+      generateBreadcrumb('#breadcrumb', [
+        { name: parroquia.provincia, url: `../templates/provincia.html?id=${parroquia.codigo_provincia}` },
+        { name: parroquia.comarca, url: `../templates/comarca.html?id=${parroquia.codigo_comarca}` },
+        { name: parroquia.concello, url: `../templates/concello.html?id=${parroquia.codigo_concello}` },
+        { name: parroquia.name, url: `../templates/parroquia.html?id=${parroquia.id}` },
+        { name: pieza.title, url: '#' },
+      ]);
+    } else if (isConcello) {
+      const parroquiasDelConcello = mapeo.filter((p) => p.codigo_concello === pieza.location);
+      const unParroquia = parroquiasDelConcello[0]; // Usamos cualquier parroquia para obtener la información común del concello
+
+      generateBreadcrumb('#breadcrumb', [
+        { name: unParroquia.provincia, url: `../templates/provincia.html?id=${unParroquia.codigo_provincia}` },
+        { name: unParroquia.comarca, url: `../templates/comarca.html?id=${unParroquia.codigo_comarca}` },
+        { name: unParroquia.concello, url: `../templates/concello.html?id=${unParroquia.codigo_concello}` },
+        { name: pieza.title, url: '#' },
+      ]);
+    } else {
+      throw new Error(`Ubicación con ID ${pieza.location} no encontrada en el mapeo.`);
+    }
   })
   .catch((error) => {
     console.error('Error al cargar la pieza:', error);
-    document.querySelector('#pieza-content').innerText = 'Ocurrió un error al cargar la pieza.';
+    document.querySelector('#pieza-content').innerText =
+      'Ocurrió un error al cargar la pieza o su ubicación. Por favor, intenta nuevamente.';
   });
