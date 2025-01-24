@@ -1,63 +1,3 @@
-### concello.html
-```html
-<!DOCTYPE html>
-<html lang="gl">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Concello</title>
-  <link rel="stylesheet" href="css/style.css">
-</head>
-<body>
-  <header>
-    <div class="logo">
-      <img src="assets/logo.png" alt="Fol e Ar" onclick="window.location.href=''">
-      <h1>Fol e Ar</h1>
-    </div>
-    <nav>
-      <a href="index.html">Mapa</a>
-      <a href="about.html">Sobre Nós</a>
-    </nav>
-  </header>
-  <nav class="breadcrumb" id="breadcrumb">
-    <!-- Breadcrumb dinámico -->
-  </nav>
-  <section>
-    <h2 id="concello-name">Parroquias en Concello</h2>
-    <ul id="parroquias-list">
-      <!-- As parroquias cargaranse dinámicamente -->
-    </ul>
-  </section>
-  <section>
-    <h2>Pezas Musicais</h2>
-    <div class="filters">
-      <label for="filter-ritmo">Filtrar por ritmo:</label>
-      <select id="filter-ritmo">
-        <option value="all">Todas as pezas</option>
-        <option value="Muiñeira">Muiñeiras</option>
-        <option value="Xota">Xotas</option>
-        <!-- Engadir máis ritmos aquí -->
-      </select>
-    </div>
-    <table id="piezas-table">
-      <thead>
-        <tr>
-          <th>Título</th>
-          <th>Ritmo</th>
-          <th>Accións</th>
-        </tr>
-      </thead>
-      <tbody>
-        <!-- Os datos cargaranse dinámicamente -->
-      </tbody>
-    </table>
-  </section>
-  <script src="/js/concello.js"></script>
-</body>
-</html>
-
-```
-
 ### generate_indices.py
 ```python
 import os
@@ -107,29 +47,88 @@ if __name__ == "__main__":
 ### index.html
 ```html
 <!DOCTYPE html>
-<html lang="es">
+<html lang="gl">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Cancionero Tradicional Gallego</title>
+  <title>mapa - fol e ar</title>
   <link rel="stylesheet" href="css/style.css">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 </head>
 <body>
   <header>
-    <h1>Cancionero Tradicional Gallego</h1>
+    <div class="logo">
+      <img src="assets/logo.png" alt="fol e ar" onclick="window.location.href='index.html'">
+      <h1>fol e ar</h1>
+    </div>
     <nav>
-      <input type="search" id="search-bar" placeholder="Busca una parroquia, concello o comarca...">
-      <select id="view-mode">
-        <option value="parroquias">Modo Parroquias</option>
-        <option value="concellos">Modo Concellos</option>
-        <option value="comarcas">Modo Comarcas</option>
-      </select>
+      <a href="about.html">Sobre Nós</a>
     </nav>
   </header>
   <div id="map"></div>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="/js/mapa.js"></script>
+  <script>
+    // Inicializa el mapa
+    const map = L.map('map').setView([42.88, -8.54], 8); // Galicia
+
+    const baseMaps = {
+      'Plano minimalista': L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { attribution: '&copy; CARTO' }),
+      'Físico': L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { attribution: '&copy; Esri' }),
+      'Só Galiza': L.tileLayer('https://stamen-tiles.a.ssl.fastly.net/toner-lite/{z}/{x}/{y}.png', { attribution: '&copy; Stamen Design' }),
+      'Callejero clásico': L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; OpenStreetMap contributors' }),
+      'Satélite': L.tileLayer('https://{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', {
+        attribution: '&copy; Google',
+        subdomains: ['mt0', 'mt1', 'mt2', 'mt3']
+      }),
+      'Relevo': L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', { attribution: '&copy; OpenTopoMap contributors' }),
+      'Escuro': L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { attribution: '&copy; CARTO' }),
+      'Xeolóxico': L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', { attribution: '&copy; OpenTopoMap contributors' }),
+    };
+
+    const defaultBase = baseMaps['Escuro'];
+    defaultBase.addTo(map);
+
+    // Añade control de capas
+    L.control.layers(baseMaps).addTo(map);
+
+    // Define los estilos
+    const defaultStyle = {
+      color: '#444',
+      weight: 0.25,
+      fillColor: '#2a7b9b',
+      fillOpacity: 0.01,
+    };
+
+    const hoverStyle = {
+      fillColor: '#66d9e8',
+      fillOpacity: 0.4,
+    };
+
+    // Cargar GeoJSON y añadir popups con enlaces
+    fetch('assets/parroquias.geojson')
+      .then((response) => response.json())
+      .then((geoData) => {
+        L.geoJSON(geoData, {
+          style: defaultStyle,
+          onEachFeature: (feature, layer) => {
+            const props = feature.properties;
+
+            // Añadir un popup con enlaces dinámicos
+            layer.bindPopup(`
+              <strong>Parroquia:</strong> <a href="templates/parroquia.html?id=${props.CODPARRO}">${props.PARROQUIA}</a><br>
+              <strong>Concello:</strong> <a href="templates/concello.html?id=${props.CODCONC}">${props.CONCELLO}</a><br>
+              <strong>Comarca:</strong> <a href="templates/comarca.html?id=${props.CODCOM}">${props.COMARCA}</a><br>
+              <strong>Provincia:</strong> <a href="templates/provincia.html?id=${props.CODPROV}">${props.PROVINCIA}</a>
+            `);
+
+            // Estilo on-hover
+            layer.on('mouseover', () => layer.setStyle(hoverStyle));
+            layer.on('mouseout', () => layer.setStyle(defaultStyle));
+          },
+        }).addTo(map);
+      })
+      .catch((error) => console.error('Error al cargar GeoJSON:', error));
+  </script>
 </body>
 </html>
 
@@ -219,86 +218,26 @@ if __name__ == "__main__":
 </head>
 <body>
     <header>
-        <h1>Sobre Nós</h1>
-        <p>A nosa paixón pola tradición oral galega</p>
+        <h1>Lorem Ipsum</h1>
+        <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit.</p>
     </header>
 
     <main>
-        <h2>Quen somos?</h2>
-        <p>Somos un grupo de persoas apaixonadas pola riqueza cultural de Galicia. Apreciamos as coplas, lendas e contos que forman parte da nosa tradición oral e queremos axudar a preservalos.</p>
+        <h2>Lorem ipsum?</h2>
+        <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vivamus luctus urna sed urna ultricies ac tempor dui sagittis. In condimentum facilisis porta.</p>
 
-        <h2>O noso obxectivo</h2>
-        <p>Construír un repositorio único que recolla e documente a distribución xeográfica das pezas tradicionais galegas. Queremos que este espazo sexa útil para toda a comunidade e promova o coñecemento e a valoración do noso patrimonio cultural.</p>
+        <h2>Lorem ipsum</h2>
+        <p>Maecenas faucibus mollis interdum. Sed posuere consectetur est at lobortis. Donec ullamcorper nulla non metus auctor fringilla. Curabitur blandit tempus porttitor.</p>
 
-        <h2>Por que o facemos?</h2>
-        <p>A tradición oral é un tesouro que merece ser coidado e transmitido. Ao rexistrarmos estas pezas, non só honramos o pasado, senón que tamén aseguramos que futuras xeracións poidan desfrutar e aprender delas.</p>
+        <h2>Lorem ipsum?</h2>
+        <p>Cras justo odio, dapibus ac facilisis in, egestas eget quam. Nullam id dolor id nibh ultricies vehicula ut id elit. Morbi leo risus, porta ac consectetur ac, vestibulum at eros.</p>
     </main>
 
     <footer>
-        <p>&copy; 2025 Tradición Oral Galega | <a href="#">Contacta connosco</a></p>
+        <p>&copy; 2025 Lorem Ipsum | <a href="#">Contactus</a></p>
     </footer>
 </body>
-</html>
 
-```
-
-### comarca.html
-```html
-
-```
-
-### parroquia.html
-```html
-<!DOCTYPE html>
-<html lang="gl">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Parroquia</title>
-  <link rel="stylesheet" href="/css/style.css">
-</head>
-<body>
-  <header>
-    <div class="logo">
-      <img src="assets/logo.png" alt="Fol e Ar" onclick="window.location.href='index.html'">
-      <h1>Fol e Ar</h1>
-    </div>
-  </header>
-  <nav class="breadcrumb" id="breadcrumb">
-    <!-- Breadcrumb dinámico -->
-  </nav>
-  <section>
-    <h2>Pezas Musicais</h2>
-    <div class="filters">
-      <label for="filter-ritmo">Filtrar por ritmo:</label>
-      <select id="filter-ritmo">
-        <option value="all">Todos os ritmos</option>
-        <option value="muiñeira">Muiñeiras</option>
-        <option value="xota">Xotas</option>
-        <!-- Engadir máis ritmos aquí -->
-      </select>
-    </div>
-    <table id="piezas-table">
-      <thead>
-        <tr>
-          <th>Título</th>
-          <th>Ritmo</th>
-          <th>Accións</th>
-        </tr>
-      </thead>
-      <tbody>
-        <!-- Os datos cargaranse dinámicamente -->
-      </tbody>
-    </table>
-  </section>
-  <script src="/js/parroquia.js"></script>
-</body>
-</html>
-
-```
-
-### provincia.html
-```html
 
 ```
 
@@ -326,6 +265,180 @@ Copla:
 AAAA Malpica ten no seu porto  
 barquiños de velas brancas.
 
+```
+
+### css/markdown.css
+```css
+/* Reset básico */
+body, html {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    font-family: 'Arial', sans-serif;
+    line-height: 1.6;
+    background-color: #ffffff;
+    color: #333;
+  }
+  
+  /* Cabecera */
+  header {
+    padding: 15px 20px;
+    background-color: #1e293b; /* Azul oscuro */
+    color: #ffffff;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 2px solid #334155;
+  }
+  
+  header h1 {
+    margin: 0;
+    font-size: 1.8rem;
+    color: #e2e8f0; /* Gris claro */
+  }
+  
+  header .logo {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+  }
+  
+  header .logo img {
+    height: 50px;
+    cursor: pointer;
+  }
+  
+  header nav {
+    display: flex;
+    gap: 15px;
+  }
+  
+  header nav a {
+    color: #94a3b8; /* Gris medio */
+    text-decoration: none;
+    font-size: 1rem;
+    transition: color 0.3s;
+  }
+  
+  header nav a:hover {
+    color: #f1f5f9; /* Blanco claro */
+  }
+  
+  /* Breadcrumb */
+  .breadcrumb {
+    font-size: 1rem;
+    margin: 15px 20px;
+    color: #475569; /* Gris oscuro */
+  }
+  
+  .breadcrumb a {
+    color: #2563eb; /* Azul vibrante */
+    text-decoration: none;
+    transition: color 0.3s;
+  }
+  
+  .breadcrumb a:hover {
+    color: #1d4ed8; /* Azul más oscuro */
+    text-decoration: underline;
+  }
+  
+  /* Filtros */
+  .filters {
+    margin: 20px 20px;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+  }
+  
+  .filters label {
+    font-weight: bold;
+    font-size: 1rem;
+    color: #1e293b; /* Azul oscuro */
+  }
+  
+  .filters select {
+    padding: 10px;
+    font-size: 1rem;
+    border: 1px solid #94a3b8;
+    border-radius: 5px;
+    background-color: #f1f5f9;
+    color: #1e293b;
+  }
+  
+  /* Tablas */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 20px 0;
+    background-color: #f8fafc;
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0px 5px 10px rgba(0, 0, 0, 0.1);
+  }
+  
+  table th, table td {
+    border: none;
+    padding: 15px;
+    text-align: left;
+  }
+  
+  table th {
+    background-color: #1e293b; /* Azul oscuro */
+    color: #ffffff;
+    text-transform: uppercase;
+  }
+  
+  table tr:nth-child(even) {
+    background-color: #e2e8f0; /* Gris claro */
+  }
+  
+  table tr:hover {
+    background-color: #cbd5e1; /* Gris más claro */
+  }
+  
+  /* Listas */
+  ul {
+    list-style: none;
+    padding: 0;
+    margin: 20px 20px;
+  }
+  
+  ul li {
+    margin: 10px 0;
+    font-size: 1rem;
+  }
+  
+  ul li a {
+    color: #2563eb; /* Azul vibrante */
+    text-decoration: none;
+    transition: color 0.3s;
+  }
+  
+  ul li a:hover {
+    color: #1d4ed8; /* Azul más oscuro */
+  }
+  
+  /* Footer */
+  footer {
+    text-align: center;
+    padding: 15px 20px;
+    background-color: #1e293b;
+    color: #f1f5f9; /* Blanco claro */
+    font-size: 0.9rem;
+    position: fixed;
+    bottom: 0;
+    width: 100%;
+  }
+  
+  /* Mapa */
+  #map {
+    width: 100%;
+    height: calc(100vh - 80px); /* Ajuste para dejar espacio para la cabecera */
+    margin-top: 10px;
+    border: 2px solid #94a3b8; /* Borde gris */
+    border-radius: 10px;
+  }
+  
 ```
 
 ### css/style.css
@@ -502,6 +615,86 @@ footer {
 
 ```
 
+### js/comarca.js
+```javascript
+import { generateBreadcrumb, renderTable } from './utils.js';
+
+const urlParams = new URLSearchParams(window.location.search);
+const comarcaId = urlParams.get('id');
+
+// Cargar los datos de la comarca
+fetch('../assets/mapeo.json')
+  .then((response) => response.json())
+  .then((data) => {
+    const comarca = data.find((c) => c.codigo_comarca === comarcaId);
+    if (comarca) {
+      generateBreadcrumb('#breadcrumb', [
+        { name: comarca.provincia, url: `provincia.html?id=${comarca.codigo_provincia}` },
+        { name: comarca.comarca, url: '#' },
+      ]);
+      document.querySelector('#comarca-name').innerText = `Concellos en ${comarca.comarca}`;
+    } else {
+      document.querySelector('#comarca-name').innerText = 'Comarca non atopada';
+    }
+  })
+  .catch((error) => {
+    console.error('Error ao cargar os datos da comarca:', error);
+    document.querySelector('#comarca-name').innerText = 'Erro ao cargar a comarca.';
+  });
+
+// Mostrar concellos en la comarca
+fetch('../assets/mapeo.json')
+  .then((response) => response.json())
+  .then((data) => {
+    const concellos = data
+      .filter((p) => p.codigo_comarca === comarcaId)
+      .map((p) => p.concello)
+      .filter((value, index, self) => self.indexOf(value) === index) // Eliminar duplicados
+      .sort(); // Ordenar alfabéticamente
+
+    const list = document.querySelector('#concellos-list');
+    if (concellos.length > 0) {
+      list.innerHTML = concellos
+        .map((concello) => `<li><a href="concello.html?id=${concello.codigo_concello}">${concello}</a></li>`)
+        .join('');
+    } else {
+      list.innerHTML = '<li>Non hai concellos rexistrados nesta comarca.</li>';
+    }
+  })
+  .catch((error) => {
+    console.error('Error ao cargar os concellos:', error);
+    document.querySelector('#concellos-list').innerHTML = '<li>Erro ao cargar os concellos.</li>';
+  });
+
+// Mostrar piezas asociadas a la comarca
+fetch('../assets/piezas.json')
+  .then((response) => response.json())
+  .then((data) => {
+    const piezas = data.filter((pieza) => pieza.location.startsWith(comarcaId));
+    if (piezas.length > 0) {
+      renderTable('#piezas-table', piezas, ['title', 'ritmo', 'id'], {
+        id: (id) => `<a href="pieza.html?id=${id}">Ver</a>`,
+      });
+    } else {
+      document.querySelector('#piezas-table tbody').innerHTML = '<tr><td colspan="3">Non hai pezas rexistradas nesta comarca.</td></tr>';
+    }
+
+    // Filtro de ritmos
+    document.querySelector('#filter-ritmo').addEventListener('change', (e) => {
+      const selectedRitmo = e.target.value;
+      const filtered = piezas.filter((pieza) => selectedRitmo === 'all' || pieza.ritmo === selectedRitmo);
+      renderTable('#piezas-table', filtered, ['title', 'ritmo', 'id'], {
+        id: (id) => `<a href="pieza.html?id=${id}">Ver</a>`,
+      });
+    });
+  })
+  .catch((error) => {
+    console.error('Error ao cargar as pezas:', error);
+    document.querySelector('#piezas-table tbody').innerHTML = '<tr><td colspan="3">Erro ao cargar as pezas.</td></tr>';
+  });
+
+```
+
 ### js/mapa.js
 ```javascript
 // Inicializa el mapa
@@ -529,312 +722,577 @@ const defaultStyle = {
   fillOpacity: 0.01,
 };
 
+const highlightedStyle = {
+  color: '#444',
+  weight: 0.5,
+  fillColor: '#f8c102',
+  fillOpacity: 0.6,
+};
+
 const hoverStyle = {
   fillColor: '#66d9e8',
   fillOpacity: 0.4,
 };
 
-// Cargar el GeoJSON reproyectado
-fetch('/assets/parroquias.geojson')
+// Cargar los datos de piezas para identificar ubicaciones registradas
+let highlightedLocations = [];
+fetch('assets/piezas.json')
+  .then((response) => response.json())
+  .then((data) => {
+    highlightedLocations = data.map((pieza) => pieza.location);
+    return fetch('assets/parroquias.geojson');
+  })
   .then((response) => response.json())
   .then((geoData) => {
     L.geoJSON(geoData, {
-      style: defaultStyle,
+      style: (feature) => {
+        const isHighlighted = highlightedLocations.some((loc) =>
+          feature.properties.CODPARRO.startsWith(loc) || feature.properties.CODCONC.startsWith(loc)
+        );
+        return isHighlighted ? highlightedStyle : defaultStyle;
+      },
       onEachFeature: (feature, layer) => {
         const props = feature.properties;
 
         // Añadir un popup con enlaces a las páginas de las entidades
         layer.bindPopup(`
-          <strong>Parroquia:</strong> <a href="parroquia.html?id=${props.CODPARRO}">${props.PARROQUIA}</a><br>
-          <strong>Concello:</strong> <a href="concello.html?id=${props.CODCONC}">${props.CONCELLO}</a><br>
-          <strong>Comarca:</strong> <a href="comarca.html?id=${props.CODCOM}">${props.COMARCA}</a><br>
-          <strong>Provincia:</strong> <a href="provincia.html?id=${props.CODPROV}">${props.PROVINCIA}</a>
+          <strong>Parroquia:</strong> <a href="templates/parroquia.html?id=${props.CODPARRO}">${props.PARROQUIA}</a><br>
+          <strong>Concello:</strong> <a href="templates/concello.html?id=${props.CODCONC}">${props.CONCELLO}</a><br>
+          <strong>Comarca:</strong> <a href="templates/comarca.html?id=${props.CODCOM}">${props.COMARCA}</a><br>
+          <strong>Provincia:</strong> <a href="templates/provincia.html?id=${props.CODPROV}">${props.PROVINCIA}</a>
         `);
 
         layer.on('mouseover', () => layer.setStyle(hoverStyle));
-        layer.on('mouseout', () => layer.setStyle(defaultStyle));
+        layer.on('mouseout', () => layer.setStyle((feature) => {
+          const isHighlighted = highlightedLocations.some((loc) =>
+            feature.properties.CODPARRO.startsWith(loc) || feature.properties.CODCONC.startsWith(loc)
+          );
+          return isHighlighted ? highlightedStyle : defaultStyle;
+        }));
       },
     }).addTo(map);
   })
-  .catch((error) => console.error('Error al cargar GeoJSON:', error));
+  .catch((error) => console.error('Error al cargar datos o GeoJSON:', error));
 
 ```
 
 ### js/parroquia.js
 ```javascript
+import { generateBreadcrumb, renderTable } from './utils.js';
+
 const urlParams = new URLSearchParams(window.location.search);
 const parroquiaId = urlParams.get('id');
 
-fetch('/assets/mapeo.json')
+// Cargar los datos de la parroquia
+fetch('../assets/mapeo.json')
   .then((response) => response.json())
   .then((data) => {
-    // Encuentra la parroquia por el ID
     const parroquia = data.find((p) => p.id === parroquiaId);
     if (parroquia) {
-      // Generar el breadcrumb
-      document.querySelector('#breadcrumb').innerHTML = `
-        <a href="provincia.html?id=${parroquia.codigo_provincia}">${parroquia.provincia}</a> >
-        <a href="comarca.html?id=${parroquia.codigo_comarca}">${parroquia.comarca}</a> >
-        <a href="concello.html?id=${parroquia.codigo_concello}">${parroquia.concello}</a> >
-        ${parroquia.name}
-      `;
-    } else {
-      document.querySelector('#breadcrumb').innerHTML = '<p>Parroquia non atopada.</p>';
+      generateBreadcrumb('#breadcrumb', [
+        { name: parroquia.provincia, url: '../templates/provincia.html?id=' + parroquia.codigo_provincia },
+        { name: parroquia.comarca, url: '../templates/comarca.html?id=' + parroquia.codigo_comarca },
+        { name: parroquia.concello, url: '../templates/concello.html?id=' + parroquia.codigo_concello },
+        { name: parroquia.name, url: '#' },
+      ]);
+      
     }
   });
 
-// Mostrar piezas asociadas a la parroquia
-fetch('/assets/piezas.json')
+// Cargar las piezas musicales asociadas
+fetch('../assets/piezas.json')
   .then((response) => response.json())
   .then((data) => {
     const piezas = data.filter((pieza) => pieza.location === parroquiaId);
 
-    const tableBody = document.querySelector('#piezas-table tbody');
-    piezas.forEach((pieza) => {
-      const row = `
-        <tr>
-          <td>${pieza.title}</td>
-          <td>${pieza.ritmo}</td>
-          <td><a href="pieza.html?id=${pieza.id}">Ver</a></td>
-        </tr>
-      `;
-      tableBody.innerHTML += row;
+    // Renderizar la tabla con un override para la columna "id"
+    renderTable('#piezas-table', piezas, ['title', 'ritmo', 'id'], {
+      id: (id) => `<a href="pieza.html?id=${id}">Ver</a>`, // Personaliza la columna "id"
     });
 
-    // Filtro por ritmo
+    // Filtro de ritmos
     document.querySelector('#filter-ritmo').addEventListener('change', (e) => {
       const selectedRitmo = e.target.value;
-      const filtered = selectedRitmo === 'all' ? piezas : piezas.filter((p) => p.ritmo === selectedRitmo);
-
-      tableBody.innerHTML = '';
-      filtered.forEach((pieza) => {
-        const row = `
-          <tr>
-            <td>${pieza.title}</td>
-            <td>${pieza.ritmo}</td>
-            <td><a href="pieza.html?id=${pieza.id}">Ver</a></td>
-          </tr>
-        `;
-        tableBody.innerHTML += row;
+      const filtered = piezas.filter((pieza) => selectedRitmo === 'all' || pieza.ritmo === selectedRitmo);
+      renderTable('#piezas-table', filtered, ['title', 'ritmo', 'id'], {
+        id: (id) => `<a href="pieza.html?id=${id}">Ver</a>`,
       });
     });
   });
 
 ```
 
-### js/script.js
+### js/pieza.js
 ```javascript
-// Inicializa el mapa
-const map = L.map('map').setView([42.88, -8.54], 8); // Galicia
+import { generateBreadcrumb } from './utils.js';
 
-// Añade las capas base
-const baseMaps = {
-  'Plano minimalista': L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { attribution: '&copy; CARTO' }),
-  'Físico': L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { attribution: '&copy; Esri' }),
-  'Só Galiza': L.tileLayer('https://stamen-tiles.a.ssl.fastly.net/toner-lite/{z}/{x}/{y}.png', { attribution: '&copy; Stamen Design' }),
-};
+const urlParams = new URLSearchParams(window.location.search);
+const piezaId = urlParams.get('id');
 
-// Establece un basemap inicial
-const defaultBase = baseMaps['Físico'];
-defaultBase.addTo(map);
+const piezasJsonUrl = '../assets/piezas.json'; // Rutas relativas
+const mapeoJsonUrl = '../assets/mapeo.json'; // Rutas relativas
 
-// Añade control de capas
-L.control.layers(baseMaps).addTo(map);
+console.log('Pieza ID:', piezaId);
+console.log('Piezas JSON URL:', piezasJsonUrl);
 
-// Define los estilos
-const defaultStyle = {
-  color: '#444',          // Color de las líneas de las fronteras
-  weight: 0.25,           // Grosor de las líneas
-  fillColor: '#2a7b9b',   // Color de relleno
-  fillOpacity: 0.01,      // Transparencia del relleno
-};
-
-const hoverStyle = {
-  fillColor: '#66d9e8',   // Color de relleno en hover
-  fillOpacity: 0.4,       // Transparencia en hover
-};
-
-// Cargar el GeoJSON reproyectado
-fetch('/assets/parroquias.geojson')
-  .then((response) => response.json())
-  .then((geoData) => {
-    // Añadir las parroquias al mapa
-    L.geoJSON(geoData, {
-      style: defaultStyle, // Aplica el estilo inicial a todas las parroquias
-      onEachFeature: (feature, layer) => {
-        const props = feature.properties;
-
-        // Añadir un popup con información
-        layer.bindPopup(`
-          <strong>Parroquia:</strong> ${props.PARROQUIA}<br>
-          <strong>Concello:</strong> ${props.CONCELLO}<br>
-          <strong>Comarca:</strong> ${props.COMARCA}<br>
-          <strong>Provincia:</strong> ${props.PROVINCIA}
-        `);
-
-        // Cambiar el estilo al pasar el ratón
-        layer.on('mouseover', () => layer.setStyle(hoverStyle));
-
-        // Restaurar el estilo original al salir el ratón
-        layer.on('mouseout', () => layer.setStyle(defaultStyle));
-      },
-    }).addTo(map);
+fetch(piezasJsonUrl)
+  .then((response) => {
+    if (!response.ok) {
+      throw new Error(`Error HTTP ${response.status}`);
+    }
+    return response.json();
   })
-  .catch((error) => console.error('Error al cargar GeoJSON:', error));
+  .then((piezas) => {
+    const pieza = piezas.find((p) => p.id === piezaId);
+    console.log('Pieza encontrada:', pieza);
+
+    if (!pieza) {
+      throw new Error(`Pieza con ID ${piezaId} no encontrada`);
+    }
+
+    const piezaMarkdownUrl = `../piezas/${pieza.id}.md`; // Ruta relativa para el Markdown
+    console.log('URL Markdown:', piezaMarkdownUrl);
+
+    return Promise.all([fetch(piezaMarkdownUrl).then((res) => res.text()), pieza]);
+  })
+  .then(([markdown, pieza]) => {
+    console.log('Contenido Markdown antes de procesar:', markdown);
+
+    // Eliminar encabezado YAML
+    const markdownSinEncabezado = markdown.replace(/^---[\s\S]*?---\n/, '');
+    console.log('Contenido Markdown sin encabezado:', markdownSinEncabezado);
+
+    // Convertir Markdown a HTML
+    const html = marked.parse(markdownSinEncabezado);
+    document.querySelector('#pieza-content').innerHTML = html;
+
+    return fetch(mapeoJsonUrl)
+      .then((response) => response.json())
+      .then((mapeo) => ({ mapeo, pieza }));
+  })
+  .then(({ mapeo, pieza }) => {
+    const isParroquia = mapeo.some((p) => p.id === pieza.location);
+    const isConcello = mapeo.some((p) => p.codigo_concello === pieza.location);
+
+    if (isParroquia) {
+      const parroquia = mapeo.find((p) => p.id === pieza.location);
+      generateBreadcrumb('#breadcrumb', [
+        { name: parroquia.provincia, url: `../templates/provincia.html?id=${parroquia.codigo_provincia}` },
+        { name: parroquia.comarca, url: `../templates/comarca.html?id=${parroquia.codigo_comarca}` },
+        { name: parroquia.concello, url: `../templates/concello.html?id=${parroquia.codigo_concello}` },
+        { name: parroquia.name, url: `../templates/parroquia.html?id=${parroquia.id}` },
+        { name: pieza.title, url: '#' },
+      ]);
+    } else if (isConcello) {
+      const parroquiasDelConcello = mapeo.filter((p) => p.codigo_concello === pieza.location);
+      const unParroquia = parroquiasDelConcello[0]; // Usamos cualquier parroquia para obtener la información común del concello
+
+      generateBreadcrumb('#breadcrumb', [
+        { name: unParroquia.provincia, url: `../templates/provincia.html?id=${unParroquia.codigo_provincia}` },
+        { name: unParroquia.comarca, url: `../templates/comarca.html?id=${unParroquia.codigo_comarca}` },
+        { name: unParroquia.concello, url: `../templates/concello.html?id=${unParroquia.codigo_concello}` },
+        { name: pieza.title, url: '#' },
+      ]);
+    } else {
+      throw new Error(`Ubicación con ID ${pieza.location} no encontrada en el mapeo.`);
+    }
+  })
+  .catch((error) => {
+    console.error('Error al cargar la pieza:', error);
+    document.querySelector('#pieza-content').innerText =
+      'Ocurrió un error al cargar la pieza o su ubicación. Por favor, intenta nuevamente.';
+  });
+
+```
+
+### js/utils.js
+```javascript
+// Generar breadcrumbs dinámicos
+export function generateBreadcrumb(elementId, breadcrumbData) {
+    const isLocal = location.hostname === 'localhost' || location.hostname === '[::]';
+    const basePath = isLocal ? '' : '/map';
+  
+    const breadcrumb = breadcrumbData
+      .map(({ name, url }) => `<a href="${basePath}/${url}">${name}</a>`)
+      .join(' > ');
+  
+    document.querySelector(elementId).innerHTML = breadcrumb;
+  }
+
+  
+  // Filtrar datos
+  export function filterData(data, key, value) {
+    return value === 'all' ? data : data.filter((item) => item[key] === value);
+  }
+  
+  // Renderizar tabla
+    export function renderTable(tableId, data, columns, columnOverrides = {}) {
+        const tableBody = document.querySelector(`${tableId} tbody`);
+        tableBody.innerHTML = '';
+        data.forEach((row) => {
+        const rowHtml = columns
+            .map((col) =>
+            columnOverrides[col]
+                ? `<td>${columnOverrides[col](row[col], row)}</td>` // Usa el override si está definido
+                : `<td>${row[col]}</td>` // Renderiza texto normal si no
+            )
+            .join('');
+        tableBody.innerHTML += `<tr>${rowHtml}</tr>`;
+        });
+    }
+  
+  
+```
+
+### js/provincia.js
+```javascript
+import { generateBreadcrumb, renderTable } from './utils.js';
+
+const urlParams = new URLSearchParams(window.location.search);
+const provinciaId = urlParams.get('id');
+
+// Cargar los datos de la provincia
+fetch('../assets/mapeo.json')
+  .then((response) => response.json())
+  .then((data) => {
+    const provincia = data.find((p) => p.codigo_provincia === provinciaId);
+    if (provincia) {
+      generateBreadcrumb('#breadcrumb', [
+        { name: provincia.provincia, url: '#' },
+      ]);
+      document.querySelector('#provincia-name').innerText = `Comarcas en ${provincia.provincia}`;
+    } else {
+      document.querySelector('#provincia-name').innerText = 'Provincia non atopada';
+    }
+  })
+  .catch((error) => {
+    console.error('Error ao cargar os datos da provincia:', error);
+    document.querySelector('#provincia-name').innerText = 'Erro ao cargar a provincia.';
+  });
+
+// Mostrar comarcas en la provincia
+fetch('../assets/mapeo.json')
+  .then((response) => response.json())
+  .then((data) => {
+    const comarcas = data
+      .filter((p) => p.codigo_provincia === provinciaId)
+      .map((p) => p.comarca)
+      .filter((value, index, self) => self.indexOf(value) === index); // Eliminar duplicados
+
+    const list = document.querySelector('#comarcas-list');
+    if (comarcas.length > 0) {
+      list.innerHTML = comarcas
+        .map((comarca) => `<li><a href="comarca.html?id=${comarca.codigo_comarca}">${comarca}</a></li>`)
+        .join('');
+    } else {
+      list.innerHTML = '<li>Non hai comarcas rexistradas nesta provincia.</li>';
+    }
+  })
+  .catch((error) => {
+    console.error('Error ao cargar as comarcas:', error);
+    document.querySelector('#comarcas-list').innerHTML = '<li>Erro ao cargar as comarcas.</li>';
+  });
+
+// Mostrar piezas asociadas a la provincia
+fetch('../assets/piezas.json')
+  .then((response) => response.json())
+  .then((data) => {
+    const piezas = data.filter((pieza) => pieza.location.startsWith(provinciaId));
+    if (piezas.length > 0) {
+      renderTable('#piezas-table', piezas, ['title', 'ritmo', 'id'], {
+        id: (id) => `<a href="pieza.html?id=${id}">Ver</a>`,
+      });
+    } else {
+      document.querySelector('#piezas-table tbody').innerHTML = '<tr><td colspan="3">Non hai pezas rexistradas nesta provincia.</td></tr>';
+    }
+
+    // Filtro de ritmos
+    document.querySelector('#filter-ritmo').addEventListener('change', (e) => {
+      const selectedRitmo = e.target.value;
+      const filtered = piezas.filter((pieza) => selectedRitmo === 'all' || pieza.ritmo === selectedRitmo);
+      renderTable('#piezas-table', filtered, ['title', 'ritmo', 'id'], {
+        id: (id) => `<a href="pieza.html?id=${id}">Ver</a>`,
+      });
+    });
+  })
+  .catch((error) => {
+    console.error('Error ao cargar as pezas:', error);
+    document.querySelector('#piezas-table tbody').innerHTML = '<tr><td colspan="3">Erro ao cargar as pezas.</td></tr>';
+  });
 
 ```
 
 ### js/concello.js
 ```javascript
+import { generateBreadcrumb, renderTable } from './utils.js';
+
 const urlParams = new URLSearchParams(window.location.search);
 const concelloId = urlParams.get('id');
 
-// Generar breadcrumb dinámico y el nombre del concello
-fetch('/assets/mapeo.json')
+// Cargar los datos del concello
+fetch('../assets/mapeo.json')
   .then((response) => response.json())
   .then((data) => {
-    const concello = data.find((p) => p.codigo_concello === concelloId);
+    const concello = data.find((c) => c.codigo_concello === concelloId);
     if (concello) {
-      // Generar el breadcrumb
-      document.querySelector('#breadcrumb').innerHTML = `
-        <a href="provincia.html?id=${concello.codigo_provincia}">${concello.provincia}</a> >
-        <a href="comarca.html?id=${concello.codigo_comarca}">${concello.comarca}</a> >
-        ${concello.concello}
-      `;
-
-      // Actualizar el título del concello
+      generateBreadcrumb('#breadcrumb', [
+        { name: concello.provincia, url: `provincia.html?id=${concello.codigo_provincia}` },
+        { name: concello.comarca, url: `comarca.html?id=${concello.codigo_comarca}` },
+        { name: concello.concello, url: '#' },
+      ]);
       document.querySelector('#concello-name').innerText = `Parroquias en ${concello.concello}`;
+    } else {
+      document.querySelector('#concello-name').innerText = 'Concello non atopado';
     }
+  })
+  .catch((error) => {
+    console.error('Error ao cargar os datos do concello:', error);
+    document.querySelector('#concello-name').innerText = 'Erro ao cargar o concello';
   });
 
 // Mostrar parroquias en el concello
-fetch('/assets/mapeo.json')
+fetch('../assets/mapeo.json')
   .then((response) => response.json())
   .then((data) => {
     const parroquias = data.filter((p) => p.codigo_concello === concelloId);
 
     const list = document.querySelector('#parroquias-list');
-    parroquias.forEach((p) => {
-      const item = `<li><a href="parroquia.html?id=${p.id}">${p.name}</a></li>`;
-      list.innerHTML += item;
-    });
+    if (parroquias.length > 0) {
+      list.innerHTML = parroquias
+        .map((p) => `<li><a href="parroquia.html?id=${p.id}">${p.name}</a></li>`)
+        .join('');
+    } else {
+      list.innerHTML = '<li>Non hai parroquias rexistradas neste concello.</li>';
+    }
+  })
+  .catch((error) => {
+    console.error('Error ao cargar as parroquias:', error);
+    document.querySelector('#parroquias-list').innerHTML = '<li>Erro ao cargar as parroquias.</li>';
   });
 
-// Mostrar piezas asociadas al concello o sus parroquias
-fetch('/assets/piezas.json')
+// Mostrar piezas asociadas al concello
+fetch('../assets/piezas.json')
   .then((response) => response.json())
   .then((data) => {
     const piezas = data.filter((pieza) => pieza.location.startsWith(concelloId));
 
-    const tableBody = document.querySelector('#piezas-table tbody');
-    piezas.forEach((pieza) => {
-      // Usar el id para buscar y renderizar dinámicamente el contenido del archivo Markdown
-      fetch(`piezas/${pieza.id}.md`)
-        .then((response) => response.text())
-        .then((markdown) => {
-          // Obtener título y ritmo del frontmatter
-          const titleMatch = markdown.match(/title:\s*(.+)/);
-          const ritmoMatch = markdown.match(/ritmo:\s*(.+)/);
+    if (piezas.length > 0) {
+      renderTable('#piezas-table', piezas, ['title', 'ritmo', 'id'], {
+        id: (id) => `<a href="pieza.html?id=${id}">Ver</a>`,
+      });
+    } else {
+      document.querySelector('#piezas-table tbody').innerHTML = '<tr><td colspan="3">Non hai pezas rexistradas neste concello.</td></tr>';
+    }
 
-          const title = titleMatch ? titleMatch[1] : "Descoñecido";
-          const ritmo = ritmoMatch ? ritmoMatch[1] : "Descoñecido";
-
-          const row = `
-            <tr>
-              <td>${title}</td>
-              <td>${ritmo}</td>
-              <td><a href="pieza.html?id=${pieza.id}">Ver</a></td>
-            </tr>
-          `;
-          tableBody.innerHTML += row;
-        });
-    });
-
-    // Filtro por ritmo
+    // Filtro de ritmos
     document.querySelector('#filter-ritmo').addEventListener('change', (e) => {
       const selectedRitmo = e.target.value;
-      tableBody.innerHTML = ''; // Limpiar la tabla antes de aplicar el filtro
-
-      const filtered = selectedRitmo === 'all'
-        ? piezas
-        : piezas.filter((pieza) => {
-            // Volver a cargar el contenido Markdown para filtrar
-            const markdown = fetch(`piezas/${pieza.id}.md`).then((response) => response.text());
-            const ritmoMatch = markdown.match(/ritmo:\s*(.+)/);
-            const ritmo = ritmoMatch ? ritmoMatch[1] : "Descoñecido";
-            return ritmo === selectedRitmo;
-          });
-
-      // Renderizar las piezas filtradas
-      filtered.forEach((pieza) => {
-        fetch(`piezas/${pieza.id}.md`)
-          .then((response) => response.text())
-          .then((markdown) => {
-            const titleMatch = markdown.match(/title:\s*(.+)/);
-            const ritmoMatch = markdown.match(/ritmo:\s*(.+)/);
-
-            const title = titleMatch ? titleMatch[1] : "Descoñecido";
-            const ritmo = ritmoMatch ? ritmoMatch[1] : "Descoñecido";
-
-            const row = `
-              <tr>
-                <td>${title}</td>
-                <td>${ritmo}</td>
-                <td><a href="pieza.html?id=${pieza.id}">Ver</a></td>
-              </tr>
-            `;
-            tableBody.innerHTML += row;
-          });
+      const filtered = piezas.filter((pieza) => selectedRitmo === 'all' || pieza.ritmo === selectedRitmo);
+      renderTable('#piezas-table', filtered, ['title', 'ritmo', 'id'], {
+        id: (id) => `<a href="pieza.html?id=${id}">Ver</a>`,
       });
     });
+  })
+  .catch((error) => {
+    console.error('Error ao cargar as pezas:', error);
+    document.querySelector('#piezas-table tbody').innerHTML = '<tr><td colspan="3">Erro ao cargar as pezas.</td></tr>';
   });
 
 ```
 
 ### templates/concello.html
 ```html
+<!DOCTYPE html>
+<html lang="gl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Concello</title>
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+  <header>
+    <div class="logo">
+      <img src="../assets/logo.png" alt="Fol e Ar" onclick="window.location.href='../index.html'">
+      <h1>fol e ar</h1>
+    </div>
+    <nav>
+      <a href="../index.html">Mapa</a>
+      <a href="../about.html">Sobre Nós</a>
+    </nav>
+  </header>
+  <nav class="breadcrumb" id="breadcrumb">
+    <!-- Breadcrumb dinámico -->
+  </nav>
+  <section>
+    <h2 id="concello-name">Parroquias en Concello</h2>
+    <ul id="parroquias-list">
+      <!-- As parroquias cargaranse dinámicamente -->
+    </ul>
+  </section>
+  <section>
+    <h2>Pezas Musicais</h2>
+    <div class="filters">
+      <label for="filter-ritmo">Filtrar por ritmo:</label>
+      <select id="filter-ritmo">
+        <option value="all">Todas as pezas</option>
+        <option value="Muiñeira">Muiñeiras</option>
+        <option value="Xota">Xotas</option>
+        <!-- Engadir máis ritmos aquí -->
+      </select>
+    </div>
+    <table id="piezas-table">
+      <thead>
+        <tr>
+          <th>Título</th>
+          <th>Ritmo</th>
+          <th>Accións</th>
+        </tr>
+      </thead>
+      <tbody>
+        <!-- Os datos cargaranse dinámicamente -->
+      </tbody>
+    </table>
+  </section>
+  <script type="module" src="../js/concello.js"></script>
+</body>
+</html>
 
 ```
 
 ### templates/comarca.html
 ```html
+<!DOCTYPE html>
+<html lang="gl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Comarca</title>
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+  <header>
+    <div class="logo">
+      <img src="../assets/logo.png" alt="Fol e Ar" onclick="window.location.href='../index.html'">
+      <h1>fol e ar</h1>
+    </div>
+    <nav>
+      <a href="../index.html">Mapa</a>
+      <a href="../about.html">Sobre Nós</a>
+    </nav>
+  </header>
+  <nav class="breadcrumb" id="breadcrumb">
+    <!-- Breadcrumb dinámico -->
+  </nav>
+  <section>
+    <h2 id="comarca-name">Concellos en Comarca</h2>
+    <ul id="concellos-list">
+      <!-- Os concellos cargaranse dinámicamente -->
+    </ul>
+  </section>
+  <section>
+    <h2>Pezas Musicais</h2>
+    <div class="filters">
+      <label for="filter-ritmo">Filtrar por ritmo:</label>
+      <select id="filter-ritmo">
+        <option value="all">Todas as pezas</option>
+        <option value="Muiñeira">Muiñeiras</option>
+        <option value="Xota">Xotas</option>
+      </select>
+    </div>
+    <table id="piezas-table">
+      <thead>
+        <tr>
+          <th>Título</th>
+          <th>Ritmo</th>
+          <th>Accións</th>
+        </tr>
+      </thead>
+      <tbody>
+        <!-- Os datos cargaranse dinámicamente -->
+      </tbody>
+    </table>
+  </section>
+  <script type="module" src="../js/comarca.js"></script>
+</body>
+</html>
+
+```
+
+### templates/pieza.html
+```html
+<!DOCTYPE html>
+<html lang="gl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pieza Musical</title>
+  <link rel="stylesheet" href="../css/style.css">
+  <link rel="stylesheet" href="../css/markdown.css"> <!-- Estilos específicos para Markdown -->
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <script type="module" src="../js/pieza.js"></script>
+</head>
+<body>
+  <header>
+    <div class="logo">
+      <img src="../assets/logo.png" alt="Fol e Ar" onclick="window.location.href='index.html'">
+      <h1>fol e ar</h1>
+    </div>
+  </header>
+  <nav class="breadcrumb" id="breadcrumb"></nav>
+  <main>
+    <div id="pieza-content"></div> <!-- Contenedor para el contenido de la pieza -->
+  </main>
+</body>
+</html>
 
 ```
 
 ### templates/parroquia.html
 ```html
 <!DOCTYPE html>
-<html lang="es">
+<html lang="gl">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Parroquia</title>
-  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="../css/style.css">
 </head>
 <body>
-  <div id="contenido"></div>
-
-  <script>
-    const urlParams = new URLSearchParams(window.location.search);
-    const parroquiaId = urlParams.get('id');
-
-    fetch('/assets/mapeo.json')
-      .then((response) => response.json())
-      .then((data) => {
-        const parroquia = data.find((p) => p.id === parroquiaId);
-        if (parroquia) {
-          document.getElementById('contenido').innerHTML = `
-            <h1>${parroquia.name}</h1>
-            <p><strong>Concello:</strong> <a href="concello.html?id=${parroquia.codigo_concello}">${parroquia.concello}</a></p>
-            <p><strong>Comarca:</strong> <a href="comarca.html?id=${parroquia.codigo_comarca}">${parroquia.comarca}</a></p>
-            <p><strong>Provincia:</strong> <a href="provincia.html?id=${parroquia.codigo_provincia}">${parroquia.provincia}</a></p>
-          `;
-        } else {
-          document.getElementById('contenido').innerHTML = '<p>Parroquia no encontrada.</p>';
-        }
-      })
-      .catch((error) => console.error('Error al cargar mapeo.json:', error));
-  </script>
+  <header>
+    <div class="logo">
+      <img src="../assets/logo.png" alt="Fol e Ar" onclick="window.location.href='../index.html'">
+      <h1>fol e ar</h1>
+    </div>
+  </header>
+  <nav class="breadcrumb" id="breadcrumb">
+    <!-- Breadcrumb dinámico -->
+  </nav>
+  <section>
+    <h2>Pezas Musicais</h2>
+    <div class="filters">
+      <label for="filter-ritmo">Filtrar por ritmo:</label>
+      <select id="filter-ritmo">
+        <option value="all">Todos os ritmos</option>
+        <option value="muiñeira">Muiñeiras</option>
+        <option value="xota">Xotas</option>
+        <!-- Engadir máis ritmos aquí -->
+      </select>
+    </div>
+    <table id="piezas-table">
+      <thead>
+        <tr>
+          <th>Título</th>
+          <th>Ritmo</th>
+          <th>Accións</th>
+        </tr>
+      </thead>
+      <tbody>
+        <!-- Os datos cargaranse dinámicamente -->
+      </tbody>
+    </table>
+  </section>
+  <script type="module" src="../js/parroquia.js"></script>
 </body>
 </html>
 
@@ -842,6 +1300,60 @@ fetch('/assets/piezas.json')
 
 ### templates/provincia.html
 ```html
+<!DOCTYPE html>
+<html lang="gl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Provincia</title>
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+  <header>
+    <div class="logo">
+      <img src="../assets/logo.png" alt="Fol e Ar" onclick="window.location.href='../index.html'">
+      <h1>fol e ar</h1>
+    </div>
+    <nav>
+      <a href="../index.html">Mapa</a>
+      <a href="../about.html">Sobre Nós</a>
+    </nav>
+  </header>
+  <nav class="breadcrumb" id="breadcrumb">
+    <!-- Breadcrumb dinámico -->
+  </nav>
+  <section>
+    <h2 id="provincia-name">Comarcas en Provincia</h2>
+    <ul id="comarcas-list">
+      <!-- As comarcas cargaranse dinámicamente -->
+    </ul>
+  </section>
+  <section>
+    <h2>Pezas Musicais</h2>
+    <div class="filters">
+      <label for="filter-ritmo">Filtrar por ritmo:</label>
+      <select id="filter-ritmo">
+        <option value="all">Todas as pezas</option>
+        <option value="Muiñeira">Muiñeiras</option>
+        <option value="Xota">Xotas</option>
+      </select>
+    </div>
+    <table id="piezas-table">
+      <thead>
+        <tr>
+          <th>Título</th>
+          <th>Ritmo</th>
+          <th>Accións</th>
+        </tr>
+      </thead>
+      <tbody>
+        <!-- Os datos cargaranse dinámicamente -->
+      </tbody>
+    </table>
+  </section>
+  <script type="module" src="../js/provincia.js"></script>
+</body>
+</html>
 
 ```
 

@@ -35,27 +35,16 @@ const hoverStyle = {
   fillOpacity: 0.4,
 };
 
-// Cargar los datos de piezas para identificar ubicaciones registradas
-let highlightedLocations = [];
-fetch('assets/piezas.json')
-  .then((response) => response.json())
-  .then((data) => {
-    highlightedLocations = data.map((pieza) => pieza.location);
-    return fetch('assets/parroquias.geojson');
-  })
+let geoLayer = null;
+
+// Cargar los datos de parroquias y renderizar el mapa
+fetch('assets/parroquias.geojson')
   .then((response) => response.json())
   .then((geoData) => {
-    L.geoJSON(geoData, {
-      style: (feature) => {
-        const isHighlighted = highlightedLocations.some((loc) =>
-          feature.properties.CODPARRO.startsWith(loc) || feature.properties.CODCONC.startsWith(loc)
-        );
-        return isHighlighted ? highlightedStyle : defaultStyle;
-      },
+    geoLayer = L.geoJSON(geoData, {
+      style: defaultStyle,
       onEachFeature: (feature, layer) => {
-        const props = feature.properties;
-
-        // Añadir un popup con enlaces a las páginas de las entidades
+        const props = layer.properties;
         layer.bindPopup(`
           <strong>Parroquia:</strong> <a href="templates/parroquia.html?id=${props.CODPARRO}">${props.PARROQUIA}</a><br>
           <strong>Concello:</strong> <a href="templates/concello.html?id=${props.CODCONC}">${props.CONCELLO}</a><br>
@@ -64,13 +53,40 @@ fetch('assets/piezas.json')
         `);
 
         layer.on('mouseover', () => layer.setStyle(hoverStyle));
-        layer.on('mouseout', () => layer.setStyle((feature) => {
-          const isHighlighted = highlightedLocations.some((loc) =>
-            feature.properties.CODPARRO.startsWith(loc) || feature.properties.CODCONC.startsWith(loc)
-          );
-          return isHighlighted ? highlightedStyle : defaultStyle;
-        }));
+        layer.on('mouseout', () => layer.setStyle(defaultStyle));
       },
     }).addTo(map);
   })
-  .catch((error) => console.error('Error al cargar datos o GeoJSON:', error));
+  .catch((error) => console.error('Error al cargar GeoJSON:', error));
+
+// Función para buscar y resaltar parroquias por concello
+function searchConcello(concelloName) {
+  fetch('assets/mapeo.json')
+    .then((response) => response.json())
+    .then((data) => {
+      // Filtrar IDs de parroquias que pertenecen al concello
+      const matchingParroquias = data
+        .filter((entry) => entry.concello.toLowerCase() === concelloName.toLowerCase())
+        .map((entry) => entry.id);
+
+      if (geoLayer) {
+        geoLayer.eachLayer((layer) => {
+          const props = layer.feature.properties;
+          if (matchingParroquias.includes(props.CODPARRO)) {
+            layer.setStyle(highlightedStyle);
+          } else {
+            layer.setStyle(defaultStyle);
+          }
+        });
+      }
+    })
+    .catch((error) => console.error('Error al buscar concello:', error));
+}
+
+// Añadir evento al botón del buscador
+document.getElementById('search-btn').addEventListener('click', () => {
+  const concelloName = document.getElementById('search-concello').value.trim();
+  if (concelloName) {
+    searchConcello(concelloName);
+  }
+});
