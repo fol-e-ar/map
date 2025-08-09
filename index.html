@@ -1,91 +1,254 @@
 <!DOCTYPE html>
 <html lang="gl">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>mapa - fol e ar</title>
-  <link rel="stylesheet" href="css/style.css">
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>fol e ar · Mapa do Folclore Galego</title>
+
+  <!-- Estilos do proxecto -->
+  <link rel="stylesheet" href="css/style.css" />
+  <link rel="stylesheet" href="css/map.css" />
+  <!-- Leaflet -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+
+  <!-- Paleta e layout base (por se aínda non está no teu CSS) -->
+  <style>
+    :root{--bg:#0f172a;--card:#111827;--ink:#e5e7eb;--muted:#9ca3af;--accent:#22d3ee;--border:rgba(255,255,255,.08)}
+    *{box-sizing:border-box}html,body{height:100%;margin:0;font-family:system-ui,Segoe UI,Roboto,Helvetica,Arial}
+    body{background:linear-gradient(180deg,#0b1220,#0f172a);color:var(--ink)}
+    header{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--border);background:rgba(17,24,39,.6);backdrop-filter: blur(6px);position:sticky;top:0;z-index:10}
+    .brand{display:flex;align-items:center;gap:12px}.brand img{height:36px;border-radius:6px}
+    nav.tabs{display:flex;gap:6px}.tab{border:1px solid var(--border);background:#0b1220;color:var(--ink);padding:8px 12px;border-radius:10px;cursor:pointer}
+    .tab[aria-selected="true"]{outline:2px solid var(--accent)}
+    .wrap{max-width:1100px;margin:0 auto;padding:12px}
+    .grid{display:grid;grid-template-columns:280px 1fr;gap:12px}@media (max-width:900px){.grid{grid-template-columns:1fr}}
+    .card{background:var(--card);border:1px solid var(--border);border-radius:14px;box-shadow:0 10px 30px rgba(0,0,0,.25)}
+    .card .inner{padding:12px}
+    .filters .row{display:grid;gap:8px;margin-bottom:10px}
+    label{font-size:12px;color:var(--muted)}
+    select,input,button{padding:8px 10px;border-radius:10px;border:1px solid var(--border);background:#0b1220;color:var(--ink)}
+    button.primary{background:linear-gradient(180deg,#22d3ee,#06b6d4);border:none;color:#05202a;font-weight:700}
+    .section-title{font-weight:800;margin:0 0 8px}
+    .results{max-height:440px;overflow:auto}.list{list-style:none;margin:0;padding:0}
+    .list li{display:flex;justify-content:space-between;gap:10px;padding:10px 6px;border-bottom:1px dashed var(--border)}
+    .tag{font-size:12px;border:1px solid var(--border);padding:2px 6px;border-radius:999px;color:#cbd5e1}
+    .footer{margin-top:14px;color:var(--muted);font-size:12px;display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}
+    a{color:var(--accent)}
+    #map{height:420px;border-radius:12px;overflow:hidden;border:1px solid var(--border)}
+  </style>
 </head>
 <body>
+  <noscript>Esta aplicación precisa JavaScript para funcionar.</noscript>
+
   <header>
-    <div class="logo">
-      <img src="assets/logo.png" alt="fol e ar" onclick="window.location.href='index.html'">
-      <h1>fol e ar</h1>
+    <div class="brand">
+      <img src="assets/logo.png" alt="fol e ar">
+      <div>
+        <div style="font-weight:800">fol e ar</div>
+        <div style="font-size:12px;color:var(--muted)">Mapa do folclore galego</div>
+      </div>
     </div>
-    <nav>
-      <a href="about.html">Sobre Nós</a>
+    <nav class="tabs" role="tablist" aria-label="Vistas">
+      <button class="tab" role="tab" aria-selected="true"  data-view="mapa">Mapa</button>
+      <button class="tab" role="tab" aria-selected="false" data-view="pezas">Pezas</button>
+      <button class="tab" role="tab" aria-selected="false" data-view="coplas">Coplas</button>
     </nav>
   </header>
-  <div id="search-bar">
-    <input type="text" id="search-concello" placeholder="Introduce o nome do concello">
-    <button id="search-btn">Buscar</button>
+
+  <div class="wrap">
+    <div class="grid">
+      <!-- Filtros globais -->
+      <aside class="card">
+        <div class="inner filters">
+          <h3 class="section-title">Filtros</h3>
+
+          <!-- TERRITORIO: codificación "prov:15" | "com:1504" | "con:15043" | "par:1504303" -->
+          <div class="row">
+            <label for="territorio">Territorio</label>
+            <select id="territorio">
+              <option value="">Toda Galicia</option>
+              <!-- Placeholder; en execución real, constrúese dende assets/mapeo.json -->
+              <option value="prov:15">Provincia: A Coruña</option>
+              <option value="com:1504">Comarca: Bergantiños</option>
+              <option value="con:15043">Concello: Malpica de Bergantiños</option>
+              <option value="par:1504303">Parroquia: San Xoán de Malpica</option>
+            </select>
+          </div>
+
+          <!-- Filtro só para PEZAS -->
+          <div class="row" data-only="pezas">
+            <label for="ritmo">Ritmo</label>
+            <select id="ritmo">
+              <option value="">Todos</option>
+              <option>Muiñeira</option><option>Xota</option><option>Maneo</option>
+              <option>Pasodobre</option><option>Valse</option><option>Mazurca</option><option>Polca</option>
+            </select>
+          </div>
+
+          <!-- Filtro só para COPLAS -->
+          <div class="row" data-only="coplas">
+            <label for="q">Buscar texto (coplas)</label>
+            <input id="q" type="search" placeholder="Ex.: barquiños de velas..." />
+          </div>
+
+          <div class="actions">
+            <button class="primary" id="apply">Aplicar</button>
+            <button id="clear">Limpar</button>
+          </div>
+
+          <!-- Suxestións vía Issues (gratis) -->
+          <div style="margin-top:8px;font-size:12px;color:var(--muted)">
+            + <a href="#" id="suxest">Enviar suxestión</a> ·
+            <a href="#" id="engadir">Engadir copla</a>
+          </div>
+        </div>
+      </aside>
+
+      <!-- Vistas -->
+      <main>
+        <!-- MAPA -->
+        <section class="card view" id="view-mapa">
+          <div class="inner">
+            <h3 class="section-title">Mapa</h3>
+            <div id="map"><div class="placeholder">[ Cargando Leaflet... ]</div></div>
+            <div class="footer">
+              <div>Tiles: OSM / CARTO / Stamen</div>
+              <div><a href="#" id="open-parroquia">Abrir parroquia →</a></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- PEZAS -->
+        <section class="card view" id="view-pezas" hidden>
+          <div class="inner">
+            <h3 class="section-title">Pezas</h3>
+            <div class="results">
+              <ul class="list" id="pezas-list"></ul>
+            </div>
+          </div>
+        </section>
+
+        <!-- COPLAS -->
+        <section class="card view" id="view-coplas" hidden>
+          <div class="inner">
+            <h3 class="section-title">Coplas</h3>
+            <div class="results">
+              <ul class="list" id="coplas-list"></ul>
+            </div>
+
+            <!-- Cesta -->
+            <div class="card cesta">
+              <div class="inner">
+                <strong>Cesta de coplas (<span id="cesta-count">0</span>)</strong>
+                <div class="actions" style="margin-top:6px">
+                  <button id="cesta-save">Gardar</button>
+                  <button id="cesta-clear">Limpar</button>
+                  <button class="primary" id="cesta-pdf">Xerar PDF</button>
+                </div>
+                <div style="font-size:12px;color:var(--muted)">Arrastra para ordenar (TODO).</div>
+              </div>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
   </div>
-  <div id="map"></div>
-  <script src="js/mapa.js" type="module"></script>
-  <div id="map"></div>
+
+  <!-- Librarías externas -->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script>
-    // Inicializa el mapa
-    const map = L.map('map').setView([42.88, -8.54], 8); // Galicia
 
-    const baseMaps = {
-      'Plano minimalista': L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { attribution: '&copy; CARTO' }),
-      'Físico': L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { attribution: '&copy; Esri' }),
-      'Só Galiza': L.tileLayer('https://stamen-tiles.a.ssl.fastly.net/toner-lite/{z}/{x}/{y}.png', { attribution: '&copy; Stamen Design' }),
-      'Callejero clásico': L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; OpenStreetMap contributors' }),
-      'Satélite': L.tileLayer('https://{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', {
-        attribution: '&copy; Google',
-        subdomains: ['mt0', 'mt1', 'mt2', 'mt3']
-      }),
-      'Relevo': L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', { attribution: '&copy; OpenTopoMap contributors' }),
-      'Escuro': L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { attribution: '&copy; CARTO' }),
-      'Xeolóxico': L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', { attribution: '&copy; OpenTopoMap contributors' }),
+  <!-- Módulo principal: orquestra as vistas e os filtros -->
+  <script type="module">
+    // Importa como * para permitir que os ficheiros existan aínda que non exporten nada aínda
+    import * as mapa     from './js/mapa.js';
+    import * as buscador from './js/buscador.js';
+    import './js/datos.js';
+    import './js/popup.js';
+    import './js/utils.js';
+
+    // ---- Tabs (cambian de vista) ----
+    const tabs = document.querySelectorAll('.tab');
+    const views = {
+      mapa: document.getElementById('view-mapa'),
+      pezas: document.getElementById('view-pezas'),
+      coplas: document.getElementById('view-coplas'),
     };
+    function show(view){
+      Object.values(views).forEach(v => v.hidden = true);
+      views[view].hidden = false;
+      tabs.forEach(t => t.setAttribute('aria-selected', t.dataset.view===view));
+      // Amosar/ocultar campos específicos á vista
+      document.querySelectorAll('[data-only]').forEach(n => {
+        n.style.display = (n.getAttribute('data-only')===view) ? 'grid' : 'none';
+      });
+    }
+    tabs.forEach(t => t.addEventListener('click', () => show(t.dataset.view)));
+    show('mapa');
 
-    const defaultBase = baseMaps['Escuro'];
-    defaultBase.addTo(map);
+    // ---- Ligazóns para suxestións (Issues) ----
+    document.getElementById('suxest').href =
+      'https://github.com/fol-e-ar/map/issues/new?title=[Suxesti%C3%B3n]&body=Descrici%C3%B3n%3A%0AConcello%2FParroquia%3A%0AEnlace%20(se%20hai)%3A';
+    document.getElementById('engadir').href =
+      'https://github.com/fol-e-ar/map/issues/new?title=[Copla]%20T%C3%ADtulo&body=Localizaci%C3%B3n%20(c%C3%B3digo)%3A%0A%0ATexto%3A%0A%0AFonte%3A';
 
-    // Añade control de capas
-    L.control.layers(baseMaps).addTo(map);
+    // ---- Inicialización de vistas ----
+    // CONTRATO esperado (impleméntao en js/mapa.js):
+    //   export function initMapa({ mapContainerId }) { ... }
+    //   export function onFiltersChange({ scope, ritmo, q }) { ... } // opcional
+    if (typeof mapa.initMapa === 'function') mapa.initMapa({ mapContainerId: 'map' });
 
-    // Define los estilos
-    const defaultStyle = {
-      color: '#444',
-      weight: 0.25,
-      fillColor: '#2a7b9b',
-      fillOpacity: 0.01,
-    };
+    // CONTRATO esperado (impleméntao en js/buscador.js):
+    //   export function initBuscador({ pezasListId, coplasListId, cestaCountId }) { ... }
+    //   export function applyFiltersFromUI({ scope, ritmo, q }) { return {scope,ritmo,q}; }
+    if (typeof buscador.initBuscador === 'function') {
+      buscador.initBuscador({ pezasListId: 'pezas-list', coplasListId: 'coplas-list', cestaCountId: 'cesta-count' });
+    }
 
-    const hoverStyle = {
-      fillColor: '#66d9e8',
-      fillOpacity: 0.4,
-    };
+    // ---- Bus de filtros ----
+    const territorioEl = document.getElementById('territorio');
+    const ritmoEl      = document.getElementById('ritmo');
+    const qEl          = document.getElementById('q');
 
-    // Cargar GeoJSON y añadir popups con enlaces
-    fetch('assets/parroquias.geojson')
-      .then((response) => response.json())
-      .then((geoData) => {
-        L.geoJSON(geoData, {
-          style: defaultStyle,
-          onEachFeature: (feature, layer) => {
-            const props = feature.properties;
+    function emitFiltersChange({scope, ritmo, q}){
+      const detail = { scope: scope || '', ritmo: ritmo || '', q: q || '' };
+      document.dispatchEvent(new CustomEvent('filters:change', { detail }));
+      // Que o mapa poida reaccionar (se define onFiltersChange)
+      if (typeof mapa.onFiltersChange === 'function') mapa.onFiltersChange(detail);
+    }
 
-            // Añadir un popup con enlaces dinámicos
-            layer.bindPopup(`
-              <strong>Parroquia:</strong> <a href="templates/parroquia.html?id=${props.CODPARRO}">${props.PARROQUIA}</a><br>
-              <strong>Concello:</strong> <a href="templates/concello.html?id=${props.CODCONC}">${props.CONCELLO}</a><br>
-              <strong>Comarca:</strong> <a href="templates/comarca.html?id=${props.CODCOM}">${props.COMARCA}</a><br>
-              <strong>Provincia:</strong> <a href="templates/provincia.html?id=${props.CODPROV}">${props.PROVINCIA}</a>
-            `);
+    document.getElementById('apply').addEventListener('click', () => {
+      const payload = typeof buscador.applyFiltersFromUI === 'function'
+        ? buscador.applyFiltersFromUI({
+            scope: territorioEl?.value || '',
+            ritmo: ritmoEl?.value || '',
+            q: qEl?.value || ''
+          })
+        : { scope: territorioEl?.value || '', ritmo: ritmoEl?.value || '', q: qEl?.value || '' };
+      emitFiltersChange(payload);
+    });
 
-            // Estilo on-hover
-            layer.on('mouseover', () => layer.setStyle(hoverStyle));
-            layer.on('mouseout', () => layer.setStyle(defaultStyle));
-          },
-        }).addTo(map);
-      })
-      .catch((error) => console.error('Error al cargar GeoJSON:', error));
+    document.getElementById('clear').addEventListener('click', () => {
+      if (territorioEl) territorioEl.value = '';
+      if (ritmoEl) ritmoEl.value = '';
+      if (qEl) qEl.value = '';
+      const payload = typeof buscador.applyFiltersFromUI === 'function'
+        ? buscador.applyFiltersFromUI({ scope:'', ritmo:'', q:'' })
+        : { scope:'', ritmo:'', q:'' };
+      emitFiltersChange(payload);
+    });
+
+    // ---- Exemplo: o mapa pode emitir seleccionar parroquia ----
+    // Dentro de js/mapa.js, cando o usuario preme nunha parroquia:
+    // document.dispatchEvent(new CustomEvent('map:open-parroquia', { detail: { parroquiaId:'1504303' } }));
+    document.addEventListener('map:open-parroquia', (e) => {
+      const { parroquiaId } = e.detail || {};
+      if (parroquiaId && territorioEl) {
+        territorioEl.value = `par:${parroquiaId}`;
+        const payload = { scope: territorioEl.value, ritmo: ritmoEl?.value || '', q: qEl?.value || '' };
+        emitFiltersChange(payload);
+        show('pezas'); // p.ex., ao escoller parroquia abrimos vista de Pezas
+      }
+    });
   </script>
 </body>
 </html>
