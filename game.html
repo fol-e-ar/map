@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="gl">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Editor de Paradas — Santiago de Compostela</title>
+<!-- Leaflet CDN -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<style>
+  :root{
+    --bg:#f7f8fc; --ink:#0f172a; --muted:#64748b; --panel:#ffffff; --accent:#0ea5e9; --good:#16a34a; --bad:#ef4444;
+    --shadow:0 10px 30px rgba(0,0,0,.10);
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.35 system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
+  header{
+    position:sticky;top:0;z-index:1000;display:flex;gap:10px;align-items:center;flex-wrap:wrap;
+    padding:10px;background:linear-gradient(180deg,#fff,rgba(255,255,255,.85));box-shadow:var(--shadow)
+  }
+  h1{font-size:16px;margin:0 6px 0 0;display:flex;align-items:center;gap:8px}
+  .logo{width:20px;height:20px;border-radius:6px;background:linear-gradient(135deg,#06b6d4,#8b5cf6)}
+  button,select,input,textarea{
+    border:1px solid #e5e7eb;background:#fff;color:var(--ink);border-radius:10px;padding:8px 10px;outline:none
+  }
+  button{cursor:pointer}
+  button:disabled{opacity:.6;cursor:not-allowed}
+  .pill{display:flex;gap:8px;background:#f1f5f9;border:1px solid #e2e8f0;padding:6px 8px;border-radius:9999px;align-items:center}
+  .kpis{display:flex;gap:8px;margin-left:auto;flex-wrap:wrap}
+  .kpi{background:#fff;border:1px solid #e5e7eb;border-radius:10px;padding:6px 10px}
+  main{display:grid;grid-template-columns:360px 1fr;gap:12px;padding:12px; height:calc(100% - 68px)}
+  @media (max-width: 1100px){ main{grid-template-columns:1fr; height:auto} #panel{order:2} #mapWrap{order:1;height:70vh} }
+  #panel{background:var(--panel);border-radius:14px;box-shadow:var(--shadow);padding:12px;overflow:auto}
+  #mapWrap{background:#eef6ff;border-radius:14px;box-shadow:var(--shadow);overflow:hidden;min-height:60vh}
+  #map{width:100%;height:100%;min-height:60vh}
+  .section{margin-bottom:12px}
+  .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .list{display:flex;flex-direction:column;gap:8px}
+  .item{background:#f8fafc;border:1px solid #e5e7eb;border-radius:10px;padding:8px;display:flex;gap:8px;align-items:center}
+  .dot{width:14px;height:14px;border-radius:50%}
+  .sep{height:1px;background:#e5e7eb;margin:10px 0}
+  small.muted{color:var(--muted)}
+  .leaflet-div-icon{background:transparent;border:none}
+  .badge{font-size:11px;background:#e2e8f0;border-radius:999px;padding:2px 6px}
+  textarea{width:100%;min-height:120px}
+  .btn-ghost{background:transparent}
+</style>
+</head>
+<body>
+<header>
+  <div class="logo" aria-hidden="true"></div>
+  <h1>Editor de Paradas — Santiago</h1>
+  <div class="pill">
+    <button id="btnEngadir">Engadir parada</button>
+    <button id="btnGardarLocal">Gardar (local)</button>
+    <button id="btnLimpar">Limpar todo</button>
+  </div>
+  <div class="pill">
+    <button id="btnExportar">Exportar JSON</button>
+    <button id="btnCopiar">Copiar JSON</button>
+    <label class="row" style="gap:6px">Importar
+      <button id="btnImportar">Cargar</button>
+    </label>
+  </div>
+  <div class="kpis">
+    <div class="kpi">Paradas: <b id="kCount">0</b></div>
+    <div class="kpi"><a href="https://www.openstreetmap.org/relation/12704377#map=14/42.88103/-8.53672" target="_blank">Transporte SCQ (OSM)</a></div>
+  </div>
+</header>
+
+<main>
+  <div id="panel">
+    <div class="section">
+      <h3 style="margin:6px 0">Como usar</h3>
+      <ol style="color:#334155">
+        <li>Preme <b>Engadir parada</b> e fai clic no mapa. O marcador é <b>arrastrable</b>.</li>
+        <li>Enche <b>Nome</b>, escolle <b>Tipo</b> e <b>Demanda</b> (baixa/media/alta ou número).</li>
+        <li>Repite para todas as paradas. Podes <b>editar</b> calquera facendo clic no marcador ou na listaxe.</li>
+        <li>Preme <b>Exportar JSON</b> para obter os datos. Tamén podes <b>Gardar (local)</b> no navegador.</li>
+      </ol>
+      <small class="muted">Consello: usa nomes claros ("Praza de Galicia", "San Marcos", "Os Tilos"...).</small>
+    </div>
+    <div class="sep"></div>
+
+    <div class="section">
+      <h3 style="margin:6px 0">Parada seleccionada</h3>
+      <div class="row">
+        <label style="flex:1">Nome<br/><input id="fNome" placeholder="Nome da parada"/></label>
+        <label>Tipo<br/>
+          <select id="fTipo">
+            <option value="casa">casa</option>
+            <option value="traballo">traballo</option>
+            <option value="escola">escola</option>
+            <option value="hospital">hospital</option>
+            <option value="estación">estación</option>
+            <option value="centro">centro comercial</option>
+            <option value="parque">parque</option>
+            <option value="punto">punto clave</option>
+          </select>
+        </label>
+        <label>Demanda<br/>
+          <input id="fDemanda" type="number" min="0" step="10" placeholder="120" style="width:120px"/>
+        </label>
+      </div>
+      <div class="row" style="margin-top:6px">
+        <span class="badge">Atallos demanda:</span>
+        <button class="btn-ghost" data-dem="60">baixa (60)</button>
+        <button class="btn-ghost" data-dem="120">media (120)</button>
+        <button class="btn-ghost" data-dem="200">alta (200)</button>
+        <div style="flex:1"></div>
+        <button id="btnAplicar">Aplicar cambios</button>
+        <button id="btnBorrar" class="btn-ghost" style="color:var(--bad)">Borrar parada</button>
+      </div>
+      <div class="row" style="margin-top:6px">
+        <small class="muted">Coord.: <span id="fCoord">—</span></small>
+        <small class="muted">ID: <span id="fId">—</span></small>
+      </div>
+    </div>
+
+    <div class="sep"></div>
+
+    <div class="section">
+      <h3 style="margin:6px 0">Listaxe de paradas</h3>
+      <div id="lista" class="list"></div>
+    </div>
+
+    <div class="sep"></div>
+
+    <div class="section">
+      <h3 style="margin:6px 0">JSON</h3>
+      <textarea id="jsonBox" placeholder='[ {"id":1, "nome":"Praza de Galicia", "lat":42.8795, "lng":-8.5447, "tipo":"estación", "demanda":180 } ]'></textarea>
+      <div class="row" style="margin-top:6px">
+        <button id="btnVolcar">Volcar dende a caixa</button>
+        <button id="btnDescargar">Descargar .json</button>
+      </div>
+      <small class="muted">Esquema recomendado: id, nome, lat, lng, tipo, demanda</small>
+    </div>
+
+    <div class="sep"></div>
+    <div class="section"><small class="muted">Mapa: © OpenStreetMap contribuidores · Editor nun só ficheiro</small></div>
+  </div>
+
+  <div id="mapWrap"><div id="map" role="region" aria-label="Mapa de Santiago"></div></div>
+</main>
+
+<script>
+(()=>{
+  'use strict';
+  // -------- Config --------
+  const CENTER = [42.88103, -8.53672]; // Santiago de Compostela (ligazón que pasaches)
+  const ZOOM = 14;
+  const TYPES = [
+    {key:'casa', col:'#06b6d4'},{key:'traballo', col:'#8b5cf6'},{key:'escola', col:'#22c55e'},
+    {key:'hospital', col:'#ef4444'},{key:'estación', col:'#0ea5e9'},{key:'centro', col:'#f59e0b'},
+    {key:'parque', col:'#10b981'},{key:'punto', col:'#111827'}
+  ];
+  const LS_KEY = 'SCQ_PARADAS_EDITOR_V1';
+
+  // -------- Estado --------
+  const S = { map:null, layer: null, sel: null, stops: [] };
+
+  // -------- Mapa --------
+  const map = L.map('map', { zoomControl:true }).setView(CENTER, ZOOM);
+  S.map = map;
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19,
+    attribution: '&copy; OpenStreetMap contribuidores'
+  }).addTo(map);
+  S.layer = L.layerGroup().addTo(map);
+
+  // -------- Utilidades --------
+  const $ = (s)=>document.querySelector(s);
+  function iconFor(type){
+    const t = TYPES.find(x=>x.key===type) || TYPES[TYPES.length-1];
+    const html = `<div style="transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:4px">
+      <div style="width:14px;height:14px;border-radius:50%;background:${t.col};box-shadow:0 0 0 2px #fff"></div>
+    </div>`;
+    return L.divIcon({className:'', html, iconSize:[16,16]});
+  }
+  function fmtCoord(lat,lng){ return lat.toFixed(5)+', '+lng.toFixed(5); }
+  function newId(){ return S.stops.length? Math.max(...S.stops.map(s=>s.id))+1 : 1; }
+
+  // -------- UI vínculos --------
+  const kCount = $('#kCount');
+  const fId = $('#fId'), fNome=$('#fNome'), fTipo=$('#fTipo'), fDem=$('#fDemanda'), fCoord=$('#fCoord');
+  const jsonBox = $('#jsonBox');
+
+  // Atallos demanda
+  document.querySelectorAll('[data-dem]').forEach(b=>{
+    b.addEventListener('click', ()=>{ fDem.value = b.getAttribute('data-dem'); });
+  });
+
+  // Engadir en modo clic
+  let addMode=false;
+  $('#btnEngadir').onclick = ()=>{ addMode=!addMode; $('#btnEngadir').textContent = addMode? 'Modo: clic no mapa' : 'Engadir parada'; };
+  map.on('click', (e)=>{
+    if(!addMode) return;
+    const latlng = [e.latlng.lat, e.latlng.lng];
+    const stop = { id:newId(), nome:'Parada '+newId(), lat:latlng[0], lng:latlng[1], tipo:'punto', demanda:120 };
+    addStop(stop, true);
+    selectStop(stop.id);
+  });
+
+  // Gardar local
+  $('#btnGardarLocal').onclick = ()=>{ localStorage.setItem(LS_KEY, JSON.stringify(S.stops)); alert('Gardado no navegador.'); };
+  // Limpar
+  $('#btnLimpar').onclick = ()=>{ if(confirm('Borrar TODAS as paradas?')){ S.stops=[]; S.layer.clearLayers(); S.sel=null; renderList(); saveLS(); clearForm(); } };
+
+  // Exportar JSON
+  $('#btnExportar').onclick = ()=>{ jsonBox.value = JSON.stringify(S.stops, null, 2); };
+  // Copiar JSON
+  $('#btnCopiar').onclick = async()=>{
+    if(!jsonBox.value) jsonBox.value = JSON.stringify(S.stops, null, 2);
+    await navigator.clipboard.writeText(jsonBox.value);
+    alert('Copiado ao portapapeis.');
+  };
+  // Importar dende caixa
+  $('#btnVolcar').onclick = ()=>{
+    try{
+      const arr = JSON.parse(jsonBox.value||'[]');
+      if(!Array.isArray(arr)) throw new Error('Formato non válido');
+      loadFromArray(arr);
+      alert('Importado dende a caixa.');
+    }catch(e){ alert('Erro ao parsear JSON: '+e.message); }
+  };
+  // Cargar vía diálogo (usa textarea tamén)
+  $('#btnImportar').onclick = ()=>{
+    const txt = prompt('Pega aquí o JSON de paradas:'); if(!txt) return;
+    try{ const arr=JSON.parse(txt); loadFromArray(arr); alert('Importado.'); } catch(e){ alert('Erro: '+e.message) }
+  };
+  // Descargar ficheiro
+  $('#btnDescargar').onclick = ()=>{
+    const blob = new Blob([JSON.stringify(S.stops, null, 2)], {type:'application/json'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href=url; a.download='paradas_santiago.json'; a.click(); URL.revokeObjectURL(url);
+  };
+
+  // Aplicar cambios parada
+  $('#btnAplicar').onclick = ()=>{
+    if(!S.sel) return;
+    S.sel.nome = (fNome.value||'').trim()||S.sel.nome;
+    S.sel.tipo = fTipo.value;
+    S.sel.demanda = Math.max(0, Number(fDem.value||0)|0);
+    // actualizar marcador
+    S.sel._mk.setIcon(iconFor(S.sel.tipo));
+    S.sel._mk.unbindTooltip();
+    S.sel._mk.bindTooltip(`${S.sel.nome}<br><small>demanda: ${S.sel.demanda}</small>`,{direction:'top'});
+    renderList(); saveLS();
+  };
+  // Borrar parada
+  $('#btnBorrar').onclick = ()=>{
+    if(!S.sel) return; if(!confirm('Borrar esta parada?')) return;
+    S.layer.removeLayer(S.sel._mk); S.stops = S.stops.filter(s=>s.id!==S.sel.id); S.sel=null; renderList(); saveLS(); clearForm();
+  };
+
+  function clearForm(){ fId.textContent='—'; fNome.value=''; fTipo.value='punto'; fDem.value=''; fCoord.textContent='—'; }
+
+  // -------- Lóxica de paradas --------
+  function addStop(stop, addMarker){
+    if(addMarker){
+      const mk = L.marker([stop.lat, stop.lng], {icon:iconFor(stop.tipo), draggable:true}).addTo(S.layer);
+      mk.on('move', (ev)=>{ stop.lat=ev.latlng.lat; stop.lng=ev.latlng.lng; if(S.sel && S.sel.id===stop.id){ fCoord.textContent=fmtCoord(stop.lat, stop.lng); } });
+      mk.on('click', ()=> selectStop(stop.id));
+      mk.bindTooltip(`${stop.nome}<br><small>demanda: ${stop.demanda}</small>`,{direction:'top'});
+      stop._mk=mk;
+    }
+    S.stops.push(stop);
+    renderList(); updateCount(); saveLS();
+  }
+
+  function selectStop(id){
+    const s = S.stops.find(x=>x.id===id); if(!s) return; S.sel=s;
+    fId.textContent = s.id; fNome.value=s.nome; fTipo.value=s.tipo; fDem.value=s.demanda; fCoord.textContent = fmtCoord(s.lat,s.lng);
+    S.map.setView([s.lat,s.lng], Math.max(14, S.map.getZoom()));
+  }
+
+  function renderList(){
+    const box = document.getElementById('lista'); box.innerHTML='';
+    if(!S.stops.length){ const d=document.createElement('div'); d.className='item'; d.textContent='Sen paradas'; box.appendChild(d); updateCount(); return; }
+    // orde por nome
+    const arr = S.stops.slice().sort((a,b)=>a.nome.localeCompare(b.nome));
+    for(const s of arr){
+      const it=document.createElement('div'); it.className='item';
+      const dot=document.createElement('div'); dot.className='dot'; dot.style.background=(TYPES.find(t=>t.key===s.tipo)||{}).col||'#111827';
+      const info=document.createElement('div'); info.style.flex='1'; info.innerHTML = `<b>${s.nome}</b> <span class="badge">${s.tipo}</span> <span class="badge">dem: ${s.demanda}</span><br><small class="muted">${fmtCoord(s.lat,s.lng)}</small>`;
+      const go=document.createElement('button'); go.textContent='Seleccionar'; go.onclick=()=> selectStop(s.id);
+      const rm=document.createElement('button'); rm.textContent='Borrar'; rm.onclick=()=>{ if(confirm('Borrar?')){ S.layer.removeLayer(s._mk); S.stops=S.stops.filter(x=>x.id!==s.id); if(S.sel&&S.sel.id===s.id) S.sel=null; renderList(); saveLS(); updateCount(); } };
+      it.append(dot,info,go,rm); box.appendChild(it);
+    }
+    updateCount();
+  }
+
+  function updateCount(){ kCount.textContent = S.stops.length; }
+  function saveLS(){ try{ localStorage.setItem(LS_KEY, JSON.stringify(S.stops.map(({_mk, ...s})=>s))); }catch(e){} }
+  function loadLS(){ try{ const arr=JSON.parse(localStorage.getItem(LS_KEY)||'null'); if(Array.isArray(arr)) loadFromArray(arr); }catch(e){} }
+
+  function loadFromArray(arr){
+    // limpar
+    S.layer.clearLayers(); S.stops=[]; S.sel=null; clearForm();
+    for(const raw of arr){
+      const stop = {
+        id: Number(raw.id)||newId(),
+        nome: String(raw.nome||raw.name||'Parada '+newId()),
+        lat: Number(raw.lat), lng: Number(raw.lng),
+        tipo: String(raw.tipo||raw.type||'punto'),
+        demanda: Math.max(0, Number(raw.demanda||raw.pop||120)|0)
+      };
+      // validar coords
+      if(!isFinite(stop.lat)||!isFinite(stop.lng)) continue;
+      addStop(stop, true);
+    }
+    renderList(); updateCount(); saveLS();
+  }
+
+  // -------- Boot --------
+  loadLS();
+  // Se non hai nada, engadimos un par de exemplos
+  if(!S.stops.length){
+    const demo = [
+      {id:1, nome:'Praza de Galicia', lat:42.87954, lng:-8.54469, tipo:'estación', demanda:180},
+      {id:2, nome:'San Marcos', lat:42.90465, lng:-8.50743, tipo:'punto', demanda:160},
+      {id:3, nome:'Os Tilos', lat:42.85756, lng:-8.52912, tipo:'casa', demanda:170}
+    ];
+    loadFromArray(demo);
+  }
+})();
+</script>
+</body>
+</html>

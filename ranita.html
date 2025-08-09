@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+<title>Ranita Pixel — Nenúfares</title>
+<style>
+  :root{
+    --ink:#10344c;
+    --glass:rgba(255,255,255,.75);
+    --accent:#ffd166;
+  }
+  html,body{height:100%}
+  body{margin:0;display:flex;align-items:center;justify-content:center;background:#86d0ff;overflow:hidden;color:var(--ink);font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,"Helvetica Neue",Arial}
+  canvas{image-rendering:pixelated;image-rendering:crisp-edges;background:#6bbcff;border-radius:18px;box-shadow:0 18px 40px rgba(0,0,0,.25)}
+  .hud{position:fixed;top:12px;left:50%;transform:translateX(-50%);display:flex;gap:.8rem;align-items:center;background:var(--glass);backdrop-filter:blur(6px);padding:.4rem .6rem;border-radius:12px;box-shadow:0 8px 20px rgba(0,0,0,.12)}
+  .pill{height:12px;width:172px;background:#e7f7ff;border-radius:999px;overflow:hidden;border:1px solid rgba(0,0,0,.08)}
+  .gauge{height:100%;width:0%;background:linear-gradient(90deg,#6ee7b7,#34d399)}
+  .label{font-weight:700;font-size:.9rem}
+  .title{position:fixed;top:12px;left:12px;background:var(--glass);padding:.35rem .55rem;border-radius:10px;font-weight:800;box-shadow:0 6px 14px rgba(0,0,0,.12)}
+  .help{position:fixed;left:12px;bottom:12px;background:var(--glass);padding:.5rem .7rem;border-radius:10px;font-size:.85rem;box-shadow:0 6px 12px rgba(0,0,0,.12)}
+  .mobile{position:fixed;right:12px;bottom:12px;display:grid;grid-template-columns:repeat(3,56px);gap:8px}
+  .k{width:56px;height:56px;background:var(--glass);border:2px solid rgba(0,0,0,.1);border-radius:14px;display:flex;align-items:center;justify-content:center;font-weight:800;box-shadow:0 8px 14px rgba(0,0,0,.16);user-select:none}
+  .k:active{transform:translateY(1px)}
+</style>
+</head>
+<body>
+  <canvas id="game" aria-label="Ranita Pixel"></canvas>
+
+  <div class="title">🐸 Ranita Pixel — Nenúfares</div>
+  <div class="hud" role="status" aria-live="polite">
+    <div class="label">Oxígeno</div>
+    <div class="pill" aria-hidden="true"><div id="ox" class="gauge"></div></div>
+    <div class="label">Saltos: <span id="score">0</span></div>
+    <div class="label">Mejor: <span id="best">0</span></div>
+  </div>
+  <div class="help"><b>Controles</b> — <b>Espacio</b>: saltar · <b>Flechas/WASD</b>: nadar cuando caes. Evita al <b>castor</b> 🦫. Los nenúfares se mueven.
+  </div>
+  <div class="mobile">
+    <div class="k" data-btn="jump">⤼</div>
+    <div class="k" data-btn="up">▲</div>
+    <div class="k" data-btn="swim">~</div>
+    <div class="k" data-btn="left">◄</div>
+    <div class="k" data-btn="down">▼</div>
+    <div class="k" data-btn="right">►</div>
+  </div>
+
+<script>
+(() => {
+  // ------- Setup (low-res pixel canvas with upscale)
+  const view = document.getElementById('game');
+  const ctx = view.getContext('2d');
+  const px = document.createElement('canvas');
+  const VIRT_W = 240, VIRT_H = 135; // un poco más definido
+  px.width = VIRT_W; px.height = VIRT_H;
+  const p = px.getContext('2d', { alpha: false });
+  p.imageSmoothingEnabled = false; ctx.imageSmoothingEnabled = false;
+
+  function resize(){
+    const scale = Math.max(1, Math.floor(Math.min(innerWidth/VIRT_W, innerHeight/VIRT_H)));
+    view.width = VIRT_W * scale; view.height = VIRT_H * scale; ctx.imageSmoothingEnabled = false;
+  }
+  addEventListener('resize', resize); resize();
+
+  // ------- Util
+  const R = (a,b)=> a + Math.random()*(b-a);
+  const RI = (a,b)=> Math.floor(R(a,b+1));
+  const clamp = (v,a,b)=> Math.max(a, Math.min(b,v));
+
+  // ------- World
+  const world = {
+    t: 0,
+    pads: [], // {x,y,r,seed,phase,spd,base:{x,y}}
+    bubbles: [],
+  };
+
+  const player = {
+    x:0,y:0,vx:0,vy:0,onPad:true,oxygen:1,aim:{x:0,y:-1},alive:true,score:0,best:Number(localStorage.getItem('frog_best')||0),cd:0
+  };
+  document.getElementById('best').textContent = player.best;
+
+  const beaver = {active:false,x:-50,y:-50,vx:0,vy:0,speed:0.22,timer:0,next: 5+Math.random()*8};
+
+  function makePads(){
+    world.pads.length = 0;
+    const COUNT = 8; // menos nenúfares
+    for(let i=0;i<COUNT;i++){
+      const x = R(24,VIRT_W-24), y = R(28,VIRT_H-34);
+      const r = R(7,10);
+      const seed = Math.random()*1000, phase = R(0,Math.PI*2), spd = R(0.3,0.7);
+      world.pads.push({x,y,r,seed,phase,spd,base:{x,y}});
+    }
+    // start pad estable abajo-centro
+    const sp = {x:VIRT_W/2, y:VIRT_H-22, r:11, seed:0, phase:0, spd:0, base:{x:VIRT_W/2,y:VIRT_H-22}};
+    world.pads.push(sp);
+    player.x=sp.x; player.y=sp.y; player.vx=player.vy=0; player.onPad=true; player.oxygen=1; player.alive=true; player.score=0; player.aim={x:0,y:-1};
+  }
+  makePads();
+
+  // ------- Input
+  const keys = new Set();
+  addEventListener('keydown', e=>{
+    if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space',' '].includes(e.code)) e.preventDefault();
+    keys.add(e.code);
+  });
+  addEventListener('keyup', e=> keys.delete(e.code));
+
+  // mobile buttons
+  document.querySelectorAll('[data-btn]').forEach(b=>{
+    const map = {up:'ArrowUp',down:'ArrowDown',left:'ArrowLeft',right:'ArrowRight',jump:'Space'};
+    const code = map[b.dataset.btn]||'';
+    b.addEventListener('touchstart',e=>{e.preventDefault(); keys.add(code)});
+    b.addEventListener('touchend',e=>{e.preventDefault(); keys.delete(code)});
+    b.addEventListener('mousedown',()=>{ keys.add(code); if(code==='Space') setTimeout(()=>keys.delete('Space'),120); });
+    b.addEventListener('mouseup',()=> keys.delete(code));
+  });
+
+  const getDir = ()=>{
+    let dx=0,dy=0;
+    if(keys.has('ArrowUp')||keys.has('KeyW')) dy-=1;
+    if(keys.has('ArrowDown')||keys.has('KeyS')) dy+=1;
+    if(keys.has('ArrowLeft')||keys.has('KeyA')) dx-=1;
+    if(keys.has('ArrowRight')||keys.has('KeyD')) dx+=1;
+    if(dx||dy){ const m=Math.hypot(dx,dy); return {x:dx/m,y:dy/m}; }
+    return null;
+  }
+
+  // ------- Mechanics
+  function updatePads(dt){
+    // cada nenúfar se mece suavemente
+    for(const p of world.pads){
+      if(p.spd===0) continue; // start fijo
+      const sway = Math.sin(world.t*p.spd + p.phase);
+      p.x = p.base.x + Math.sin((world.t*0.6)+p.seed)*2 + sway*2;
+      p.y = p.base.y + Math.cos((world.t*0.7)+p.seed)*1.5 + Math.sin(p.seed)*1.2;
+    }
+  }
+
+  function onAnyPad(x,y){
+    for(const p of world.pads){ if(Math.hypot(x-p.x,y-p.y) <= p.r-0.2) return true; }
+    return false;
+  }
+
+  function nextPadInAim(){
+    const d = player.aim; let best=null, bestD=1e9;
+    for(const p of world.pads){
+      const dx=p.x-player.x, dy=p.y-player.y; const dist=Math.hypot(dx,dy);
+      if(dist<8) continue;
+      const cos = (dx*d.x+dy*d.y)/dist;
+      if(cos>0.85 && dist<bestD){ best=p; bestD=dist; }
+    }
+    return best;
+  }
+
+  function jump(){
+    if(player.cd>0 || !player.alive) return;
+    const target = nextPadInAim();
+    const pow = 1.9;
+    if(target){
+      const dx=target.x-player.x, dy=target.y-player.y, d=Math.hypot(dx,dy);
+      player.vx = (dx/d)*pow; player.vy=(dy/d)*pow; player.onPad=false; player.cd=12;
+    } else {
+      // salto corto en dirección actual
+      player.vx = player.aim.x*pow; player.vy = player.aim.y*pow; player.onPad=false; player.cd=12;
+    }
+  }
+
+  // sprites
+  const rect = (x,y,w,h,c)=>{ p.fillStyle=c; p.fillRect(x,y,w,h); };
+  const circ = (x,y,r,c)=>{ p.fillStyle=c; p.beginPath(); p.arc(x,y,r,0,Math.PI*2); p.fill(); };
+
+  function drawFrog(x,y){
+    // 10x8 aprox
+    const fx=Math.floor(x)-5, fy=Math.floor(y)-6;
+    // sombra
+    rect(fx+1,fy+7,8,1,'#00000022');
+    // cuerpo
+    rect(fx+1,fy+2,8,4,'#2f9e44');
+    rect(fx+2,fy+1,6,1,'#2f9e44');
+    // barriga
+    rect(fx+3,fy+3,4,2,'#b7e4c7');
+    // ojos
+    rect(fx+1,fy+1,2,1,'#fff'); rect(fx+7,fy+1,2,1,'#fff');
+    rect(fx+2,fy+1,1,1,'#000'); rect(fx+7,fy+1,1,1,'#000');
+    // patas
+    rect(fx,fy+5,2,1,'#277d38'); rect(fx+8,fy+5,2,1,'#277d38');
+  }
+
+  function drawPad(pad){
+    // nenúfar con flor
+    const {x,y,r} = pad; const xx=Math.floor(x), yy=Math.floor(y);
+    circ(xx,yy+1,r+1,'#1b5e2040'); // sombra
+    circ(xx,yy,r,'#2e7d32');
+    circ(xx,yy-1,r-2,'#66bb6a');
+    // corte en forma de media luna
+    p.fillStyle='#2e7d32'; p.beginPath(); p.moveTo(xx,yy); p.arc(xx,yy,r-2,-0.5,1.3); p.lineTo(xx,yy); p.fill();
+    // flor (pequeño detalle)
+    if(r>8){ rect(xx-1,yy-4,3,1,'#ffecb3'); rect(xx,yy-5,1,1,'#ffe082'); }
+  }
+
+  function drawBeaver(x,y){
+    const bx=Math.floor(x)-6, by=Math.floor(y)-4;
+    rect(bx,by,12,8,'#8d5524');
+    rect(bx-4,by+3,4,3,'#6d4c41'); // cola
+    rect(bx+10,by+3,2,2,'#8d5524');
+    rect(bx+11,by+3,1,1,'#000');
+  }
+
+  function drawWater(dt){
+    // gradiente agua
+    const g = p.createLinearGradient(0,0,0,VIRT_H);
+    g.addColorStop(0,'#7ed3ff'); g.addColorStop(1,'#4ca4e3');
+    p.fillStyle=g; p.fillRect(0,0,VIRT_W,VIRT_H);
+    // caústicas simples
+    for(let y=0;y<VIRT_H;y++){
+      const w = Math.sin((y*0.12)+world.t*2)*1.2;
+      p.globalAlpha=0.08; p.fillStyle='#ffffff'; p.fillRect(w,y,VIRT_W,1);
+    }
+    p.globalAlpha=1;
+    // vignette suave
+    const vg=p.createRadialGradient(VIRT_W/2,VIRT_H/2,10,VIRT_W/2,VIRT_H/2,Math.max(VIRT_W,VIRT_H)/1.2);
+    vg.addColorStop(0,'#0000'); vg.addColorStop(1,'#0003');
+    p.fillStyle=vg; p.fillRect(0,0,VIRT_W,VIRT_H);
+  }
+
+  // ------- Loop
+  const ox = document.getElementById('ox');
+  const scoreEl = document.getElementById('score');
+  const bestEl = document.getElementById('best');
+  let last=0;
+
+  function tick(ts){
+    const dt = (ts-last)/1000 || 0; last = ts; world.t += dt;
+
+    if(player.alive){
+      if(player.cd>0) player.cd--;
+      // actualizar dirección (solo para orientar el salto; nadar sólo en agua)
+      const d = getDir(); if(d && !player.onPad) { // nadar
+        player.vx += d.x*0.06; player.vy += d.y*0.06; player.vx=clamp(player.vx,-0.75,0.75); player.vy=clamp(player.vy,-0.75,0.75);
+      }
+      if(keys.has('Space')){ jump(); keys.delete('Space'); }
+
+      // pads en movimiento
+      updatePads(dt);
+
+      // física
+      if(!player.onPad){
+        player.x += player.vx; player.y += player.vy; player.vx*=0.992; player.vy*=0.992;
+        // oxígeno si está en agua
+        if(onAnyPad(player.x,player.y)){
+          player.onPad=true; player.vx=player.vy=0; player.oxygen=1; player.score++; scoreEl.textContent=player.score; if(player.score>player.best){ player.best=player.score; localStorage.setItem('frog_best', player.best); bestEl.textContent=player.best; }
+        } else {
+          player.oxygen -= 0.17*dt; if(player.oxygen<0) player.oxygen=0;
+          if(Math.random()<0.25) world.bubbles.push({x:player.x+R(-1,1),y:player.y+R(-1,1),r:R(0.4,1.2),v:-R(0.3,0.9),a:1});
+        }
+      } else {
+        // orientar con flechas sobre el nenúfar, pero no desplazarse
+        const d2=getDir(); if(d2) player.aim = d2;
+      }
+
+      // castor
+      beaver.timer += dt;
+      if(!beaver.active){
+        if(beaver.timer>=beaver.next){
+          beaver.active=true; beaver.timer=0; beaver.next=6+Math.random()*9;
+          const side = RI(0,3);
+          if(side===0){ beaver.x=-8; beaver.y=R(8,VIRT_H-8);} // L
+          if(side===1){ beaver.x=VIRT_W+8; beaver.y=R(8,VIRT_H-8);} // R
+          if(side===2){ beaver.x=R(8,VIRT_W-8); beaver.y=-8;} // T
+          if(side===3){ beaver.x=R(8,VIRT_W-8); beaver.y=VIRT_H+8;} // B
+        }
+      } else {
+        const dx=player.x-beaver.x, dy=player.y-beaver.y, d=Math.hypot(dx,dy)||1;
+        beaver.vx=(dx/d)*beaver.speed; beaver.vy=(dy/d)*beaver.speed; beaver.x+=beaver.vx; beaver.y+=beaver.vy;
+        if(beaver.timer>8){ beaver.active=false; beaver.timer=0; }
+        if(Math.hypot(player.x-beaver.x, player.y-beaver.y)<6){ player.alive=false; }
+      }
+
+      if(player.oxygen<=0) player.alive=false;
+
+    } else {
+      if(keys.size>0){ makePads(); beaver.active=false; beaver.timer=0; }
+    }
+
+    // ------- Render
+    drawWater(dt);
+
+    // burbujas
+    for(let i=world.bubbles.length-1;i>=0;i--){
+      const b=world.bubbles[i]; b.y+=b.v; b.a-=0.01; if(b.a<=0) world.bubbles.splice(i,1); p.globalAlpha=Math.max(0,b.a); circ(b.x,b.y,b.r,'#e9fbff'); p.globalAlpha=1;
+    }
+
+    // nenúfares
+    for(const pad of world.pads) drawPad(pad);
+
+    // castor
+    if(beaver.active) drawBeaver(beaver.x,beaver.y);
+
+    // ranita
+    drawFrog(player.x,player.y);
+
+    // fin de partida
+    if(!player.alive){
+      p.fillStyle='rgba(0,0,0,.45)'; p.fillRect(0,0,VIRT_W,VIRT_H);
+      p.fillStyle='#fff'; p.font='8px monospace';
+      const msg='Fin de la partida'; const tip='Pulsa cualquier tecla para reiniciar';
+      p.fillText(msg, VIRT_W/2 - p.measureText(msg).width/2, VIRT_H/2-4);
+      p.fillText(tip, VIRT_W/2 - p.measureText(tip).width/2, VIRT_H/2+8);
+    }
+
+    // HUD oxígeno
+    const ox = document.getElementById('ox');
+    ox.style.width=(player.oxygen*100).toFixed(0)+'%';
+    ox.style.background = player.oxygen>0.45 ? 'linear-gradient(90deg,#6ee7b7,#34d399)' : (player.oxygen>0.18 ? 'linear-gradient(90deg,#facc15,#f59e0b)' : 'linear-gradient(90deg,#fb7185,#ef4444)');
+
+    ctx.clearRect(0,0,view.width,view.height);
+    ctx.drawImage(px,0,0,px.width,px.height,0,0,view.width,view.height);
+    requestAnimationFrame(tick);
+  }
+
+  requestAnimationFrame(tick);
+})();
+</script>
+</body>
+</html>

@@ -1,10 +1,11 @@
 // js/buscador.js
-// Contrato: initBuscador({ pezasListId, coplasListId, cestaCountId })
-//           applyFiltersFromUI({ scope, ritmo, q }) -> retorna o mesmo (ou normalizado)
+// Contrato co index: initBuscador({ pezasListId, coplasListId, cestaCountId })
+//                     applyFiltersFromUI({ scope, ritmo, q }) -> {scope,ritmo,q}
 
 const cache = {};
 const CESTA_KEY = 'fol-ear-cesta';
 
+/* ------------------- UTILS ------------------- */
 function getCesta(){ try { return JSON.parse(localStorage.getItem(CESTA_KEY)||'[]'); } catch { return []; } }
 function setCesta(arr){ localStorage.setItem(CESTA_KEY, JSON.stringify(arr)); }
 
@@ -17,13 +18,22 @@ async function fetchJSON(path){
   return json;
 }
 
+function escapeHtml(s){ return String(s||'').replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
+function escapeAttr(s){ return escapeHtml(s).replace(/"/g,'&quot;'); }
+function renderList(ul, rows, toHTML){ ul.innerHTML = rows.map(toHTML).join('') || '<li style="opacity:.7">Sen resultados</li>'; }
+
+/* ------------------- MAPEO (PARA FILTRAR POR ÁMBITO) ------------------- */
 function pertenceAoScopeFactory(mapeo){
   return function pertenceAoScope(location, scope){
     if (!scope) return true;
     const [tipo, codigo] = String(scope).split(':'); // prov/com/con/par
-    // buscar parroquia (id) ou calquera parroquia do concello (codigo_concello)
-    let par = mapeo.find(p => String(p.id) === String(location));
-    if (!par) par = mapeo.find(p => String(p.codigo_concello) === String(location));
+
+    // location pode ser CODPARRO (parroquia) OU CODCONC (concello)
+    let par = mapeo.byParroquia.get(String(location));
+    if (!par) {
+      const cand = mapeo.byConcelloFirstParroquia.get(String(location));
+      if (cand) par = cand;
+    }
     if (!par) return false;
 
     if (tipo === 'par')  return String(par.id) === codigo;
@@ -34,91 +44,131 @@ function pertenceAoScopeFactory(mapeo){
   };
 }
 
-function renderList(ul, rows, toHTML){
-  ul.innerHTML = rows.map(toHTML).join('') || '<li style="opacity:.7">Sen resultados</li>';
+async function buildMapeoFromParroquias(){
+  let geo;
+  try {
+    const topo = await fetchJSON('assets/parroquias.topo.json');
+    const name = (topo.objects && Object.keys(topo.objects)[0]) || 'parroquias';
+    geo = (window.topojson) ? window.topojson.feature(topo, topo.objects[name]) : null;
+  } catch { /* fallback abaixo */ }
+
+  if (!geo){
+    // ⚠️ Backup: se o Topo non existe
+    geo = await fetchJSON('assets/parroquias.geojson');
+  }
+
+  const byParroquia = new Map();
+  const byConcelloFirstParroquia = new Map();
+
+  for (const f of (geo.features||[])){
+    const p = f.properties || {};
+    const item = {
+      id: String(p.CODPARRO),
+      codigo_concello: String(p.CODCONC),
+      codigo_comarca:  String(p.CODCOM),
+      codigo_provincia:String(p.CODPROV),
+      name: p.PARROQUIA,
+      concello: p.CONCELLO,
+      comarca: p.COMARCA,
+      provincia: p.PROVINCIA
+    };
+    if (item.id) byParroquia.set(item.id, item);
+    if (item.codigo_concello && !byConcelloFirstParroquia.has(item.codigo_concello)){
+      byConcelloFirstParroquia.set(item.codigo_concello, item);
+    }
+  }
+  return { byParroquia, byConcelloFirstParroquia };
 }
 
-export function applyFiltersFromUI({ scope, ritmo, q }){
-  // lugar ideal para normalizar (p.ex. uppercase nos códigos, trim, etc.)
-  return { scope: scope?.trim() || '', ritmo: ritmo?.trim() || '', q: q?.trim() || '' };
-}
-
-export async function initBuscador({ pezasListId='pezas-list', coplasListId='coplas-list', cestaCountId='cesta-count' } = {}){
-  const pezasUL  = document.getElementById(pezasListId);
-  const coplasUL = document.getElementById(coplasListId);
-  const cestaCount = document.getElementById(cestaCountId);
-
-  // carga datos (cachea)
-  const [mapeo, pezas, coplas] = await Promise.all([
-    fetchJSON('assets/parroquias.geojson').then(g => {
-      // mapeo rápido a partir das propiedades do GeoJSON (se tes un mapeo.json propio, cámbiao aquí)
-      const feats = g.features || [];
-      return feats.map(f => {
-        const p = f.properties || {};
-        return {
-          id: String(p.CODPARRO),
-          name: p.PARROQUIA,
-          concello: p.CONCELLO,
-          codigo_concello: String(p.CODCONC),
-          comarca: p.COMARCA,
-          codigo_comarca: String(p.CODCOM),
-          provincia: p.PROVINCIA,
-          codigo_provincia: String(p.CODPROV)
-        };
-      });
-    }),
-    fetchJSON('assets/pezas.json'),
-    fetchJSON('assets/coplas.json'),
+/* ------------------- AUTOCOMPLETADO (BUSCADOR GLOBAL) ------------------- */
+async function buildIndexLugares(){
+  const [provincias, comarcas, concellos] = await Promise.all([
+    fetchJSON('assets/provincias.geojson'),
+    fetchJSON('assets/comarcas.geojson'),
+    fetchJSON('assets/concellos.geojson'),
   ]);
 
-  const pertenceAoScope = pertenceAoScopeFactory(mapeo);
+  // Parroquias desde TopoJSON (lixeiro)
+  let parroquiasGeo = null;
+  try {
+    const topo = await fetchJSON('assets/parroquias.topo.json');
+    const name = (topo.objects && Object.keys(topo.objects)[0]) || 'parroquias';
+    if (window.topojson) parroquiasGeo = window.topojson.feature(topo, topo.objects[name]);
+  } catch(e){ /* opcional: sen parroquias no index se non hai topo */ }
 
-  // estado cesta
-  let cesta = getCesta();
-  const updateCestaCount = () => { if (cestaCount) cestaCount.textContent = String(cesta.length); };
-  updateCestaCount();
+  const idx = [];
 
-  // Render inicial (sen filtros)
-  renderPezas({ pezas, pertenceAoScope, pezasUL, scope:'', ritmo:'' });
-  renderCoplas({ coplas, pertenceAoScope, coplasUL, scope:'', q:'', onAdd: (item) => {
-    cesta.push(item);
-    setCesta(cesta);
-    updateCestaCount();
-  }});
+  for (const f of (provincias.features||[])) {
+    const p = f.properties||{};
+    idx.push({ label: `${p.PROVINCIA}`, type: 'prov', code: String(p.CODPROV), scope: `prov:${String(p.CODPROV)}` });
+  }
 
-  // Reaccionar a filtros globais
-  document.addEventListener('filters:change', (e) => {
-    const { scope, ritmo, q } = e.detail || {};
-    renderPezas({ pezas, pertenceAoScope, pezasUL, scope, ritmo });
-    renderCoplas({ coplas, pertenceAoScope, coplasUL, scope, q, onAdd: (item) => {
-      cesta.push(item);
-      setCesta(cesta);
-      updateCestaCount();
-    }});
+  for (const f of (comarcas.features||[])) {
+    const p = f.properties||{};
+    idx.push({ label: `${p.COMARCA}`, type: 'com', code: String(p.CODCOM), scope: `com:${String(p.CODCOM)}` });
+  }
+
+  for (const f of (concellos.features||[])) {
+    const p = f.properties||{};
+    idx.push({ label: `${p.CONCELLO}`, type: 'con', code: String(p.CODCONC), scope: `con:${String(p.CODCONC)}` });
+  }
+
+  if (parroquiasGeo) {
+    for (const f of (parroquiasGeo.features||[])) {
+      const p = f.properties||{};
+      idx.push({ label: `${p.PARROQUIA} — ${p.CONCELLO}`, type: 'par', code: String(p.CODPARRO), scope: `par:${String(p.CODPARRO)}` });
+    }
+  }
+
+  idx.sort((a,b)=>a.label.localeCompare(b.label, 'gl'));
+  return idx;
+}
+
+function renderSuxest(ul, rows){
+  ul.innerHTML = rows.map(r => `
+    <li data-scope="${r.scope}" class="sux-item">
+      <div>
+        <strong>${escapeHtml(r.label)}</strong>
+        <span class="tag" style="margin-left:6px">${r.type.toUpperCase()}</span>
+      </div>
+    </li>
+  `).join('') || '<li style="opacity:.7">Sen resultados</li>';
+}
+
+function attachAutocomplete({ inputId='lugar', listId='lugar-suxest' }){
+  const inp = document.getElementById(inputId);
+  const ul  = document.getElementById(listId);
+  if (!inp || !ul) return;
+
+  let index = [];
+  let ready = false;
+
+  (async () => { index = await buildIndexLugares(); ready = true; })();
+
+  let lastQ = '';
+  inp.addEventListener('input', () => {
+    const q = (inp.value || '').trim().toLowerCase();
+    if (!ready || q === lastQ) return;
+    lastQ = q;
+    if (!q) { ul.innerHTML = ''; return; }
+    const out = index.filter(i => i.label.toLowerCase().includes(q)).slice(0, 15);
+    renderSuxest(ul, out);
   });
 
-  // Botóns da cesta (se existen)
-  const btnSave  = document.getElementById('cesta-save');
-  const btnClear = document.getElementById('cesta-clear');
-  const btnPdf   = document.getElementById('cesta-pdf');
-
-  btnSave?.addEventListener('click', () => {
-    setCesta(cesta);
-    updateCestaCount();
-    alert('Cesta gardada no navegador.');
-  });
-  btnClear?.addEventListener('click', () => {
-    cesta = [];
-    setCesta(cesta);
-    updateCestaCount();
-  });
-  btnPdf?.addEventListener('click', async () => {
-    // Integración futura con jsPDF: cargar lib e xerar
-    alert('PDF: pendente de implementar con jsPDF.');
+  ul.addEventListener('click', (ev) => {
+    const li = ev.target.closest('li[data-scope]');
+    if (!li) return;
+    const scope = li.getAttribute('data-scope');
+    const label = li.textContent.trim();
+    // Comunicamos ao index: set scope + cambiar vista
+    document.dispatchEvent(new CustomEvent('ui:set-scope', { detail: { scope, label } }));
+    // Limpeza UI
+    ul.innerHTML = '';
+    inp.value = '';
   });
 }
 
-/* --------- helpers de render --------- */
+/* ------------------- RENDER LISTAS ------------------- */
 function renderPezas({ pezas, pertenceAoScope, pezasUL, scope, ritmo }){
   if (!pezasUL) return;
   const filtered = pezas.filter(p =>
@@ -149,7 +199,7 @@ function renderCoplas({ coplas, pertenceAoScope, coplasUL, scope, q, onAdd }){
   renderList(coplasUL, filtered, (row) => `
     <li>
       <div>
-        <div>${escapeHtml(String(row.texto || '')).replace(/\\n/g,'<br>')}</div>
+        <div>${escapeHtml(String(row.texto || '')).replace(/\n/g,'<br>')}</div>
         <div style="font-size:12px;color:var(--muted)">Localización: ${escapeHtml(String(row.location||''))}</div>
       </div>
       <div class="actions">
@@ -157,8 +207,6 @@ function renderCoplas({ coplas, pertenceAoScope, coplasUL, scope, q, onAdd }){
       </div>
     </li>
   `);
-
-  // Delegación para botóns "+ Engadir"
   coplasUL.onclick = (ev) => {
     const btn = ev.target.closest('button[data-id]');
     if (!btn) return;
@@ -168,8 +216,67 @@ function renderCoplas({ coplas, pertenceAoScope, coplasUL, scope, q, onAdd }){
   };
 }
 
-/* --------- utils --------- */
-function escapeHtml(s){
-  return String(s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+/* ------------------- API EXPOSTA ------------------- */
+export function applyFiltersFromUI({ scope, ritmo, q }){
+  return { scope: scope?.trim() || '', ritmo: ritmo?.trim() || '', q: q?.trim() || '' };
 }
-function escapeAttr(s){ return escapeHtml(s).replace(/"/g, '&quot;'); }
+
+export async function initBuscador({ pezasListId='pezas-list', coplasListId='coplas-list', cestaCountId='cesta-count' } = {}){
+  const pezasUL  = document.getElementById(pezasListId);
+  const coplasUL = document.getElementById(coplasListId);
+  const cestaCount = document.getElementById(cestaCountId);
+
+  // 1) Carga datos
+  const [mapeo, pezas, coplas] = await Promise.all([
+    buildMapeoFromParroquias(),
+    fetchJSON('assets/pezas.json'),
+    fetchJSON('assets/coplas.json'),
+  ]);
+  const pertenceAoScope = pertenceAoScopeFactory(mapeo);
+
+  // 2) Estado cesta
+  let cesta = getCesta();
+  const updateCestaCount = () => { if (cestaCount) cestaCount.textContent = String(cesta.length); };
+  updateCestaCount();
+
+  // 3) Render inicial (sen filtros)
+  renderPezas({ pezas, pertenceAoScope, pezasUL, scope:'', ritmo:'' });
+  renderCoplas({ coplas, pertenceAoScope, coplasUL, scope:'', q:'', onAdd: (item) => {
+    cesta.push(item);
+    setCesta(cesta);
+    updateCestaCount();
+  }});
+
+  // 4) Reaccionar a filtros globais
+  document.addEventListener('filters:change', (e) => {
+    const { scope, ritmo, q } = e.detail || {};
+    renderPezas({ pezas, pertenceAoScope, pezasUL, scope, ritmo });
+    renderCoplas({ coplas, pertenceAoScope, coplasUL, scope, q, onAdd: (item) => {
+      cesta.push(item);
+      setCesta(cesta);
+      updateCestaCount();
+    }});
+  });
+
+  // 5) Autocompletado global (buscador de lugares)
+  attachAutocomplete({ inputId:'lugar', listId:'lugar-suxest' });
+
+  // 6) Botóns da cesta
+  const btnSave  = document.getElementById('cesta-save');
+  const btnClear = document.getElementById('cesta-clear');
+  const btnPdf   = document.getElementById('cesta-pdf');
+
+  btnSave?.addEventListener('click', () => {
+    setCesta(cesta);
+    updateCestaCount();
+    alert('Cesta gardada no navegador.');
+  });
+  btnClear?.addEventListener('click', () => {
+    cesta = [];
+    setCesta(cesta);
+    updateCestaCount();
+  });
+  btnPdf?.addEventListener('click', async () => {
+    alert('PDF: pendente de implementar con jsPDF.');
+  });
+}

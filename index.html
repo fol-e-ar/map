@@ -11,7 +11,7 @@
   <!-- Leaflet -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 
-  <!-- Paleta e layout base (por se aínda non está no teu CSS) -->
+  <!-- Paleta e layout base -->
   <style>
     :root{--bg:#0f172a;--card:#111827;--ink:#e5e7eb;--muted:#9ca3af;--accent:#22d3ee;--border:rgba(255,255,255,.08)}
     *{box-sizing:border-box}html,body{height:100%;margin:0;font-family:system-ui,Segoe UI,Roboto,Helvetica,Arial}
@@ -27,10 +27,11 @@
     .filters .row{display:grid;gap:8px;margin-bottom:10px}
     label{font-size:12px;color:var(--muted)}
     select,input,button{padding:8px 10px;border-radius:10px;border:1px solid var(--border);background:#0b1220;color:var(--ink)}
+    input[type="search"]{width:100%}
     button.primary{background:linear-gradient(180deg,#22d3ee,#06b6d4);border:none;color:#05202a;font-weight:700}
     .section-title{font-weight:800;margin:0 0 8px}
     .results{max-height:440px;overflow:auto}.list{list-style:none;margin:0;padding:0}
-    .list li{display:flex;justify-content:space-between;gap:10px;padding:10px 6px;border-bottom:1px dashed var(--border)}
+    .list li{display:flex;justify-content:space-between;gap:10px;padding:10px 6px;border-bottom:1px dashed var(--border);cursor:pointer}
     .tag{font-size:12px;border:1px solid var(--border);padding:2px 6px;border-radius:999px;color:#cbd5e1}
     .footer{margin-top:14px;color:var(--muted);font-size:12px;display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}
     a{color:var(--accent)}
@@ -62,17 +63,19 @@
         <div class="inner filters">
           <h3 class="section-title">Filtros</h3>
 
-          <!-- TERRITORIO: codificación "prov:15" | "com:1504" | "con:15043" | "par:1504303" -->
+          <!-- BUSCADOR GLOBAL con autocompletado -->
           <div class="row">
-            <label for="territorio">Territorio</label>
-            <select id="territorio">
-              <option value="">Toda Galicia</option>
-              <!-- Placeholder; en execución real, constrúese dende assets/mapeo.json -->
-              <option value="prov:15">Provincia: A Coruña</option>
-              <option value="com:1504">Comarca: Bergantiños</option>
-              <option value="con:15043">Concello: Malpica de Bergantiños</option>
-              <option value="par:1504303">Parroquia: San Xoán de Malpica</option>
-            </select>
+            <label for="lugar">Buscar lugar (provincia, comarca, concello ou parroquia)</label>
+            <input id="lugar" type="search" autocomplete="off" placeholder="Ex.: A Coruña, Bergantiños, Malpica, San Xoán de Malpica">
+            <ul id="lugar-suxest" class="list" style="margin-top:6px;max-height:200px;overflow:auto"></ul>
+          </div>
+
+          <!-- Chip de ámbito activo -->
+          <div class="row" id="scope-row" style="display:none">
+            <div id="scope-chip" class="tag" style="display:inline-flex;align-items:center;gap:8px">
+              Ámbito: <span id="scope-label"></span>
+              <button id="scope-clear" class="tag" title="Quitar ámbito">✕</button>
+            </div>
           </div>
 
           <!-- Filtro só para PEZAS -->
@@ -156,10 +159,10 @@
 
   <!-- Librarías externas -->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/topojson-client@3"></script>
 
   <!-- Módulo principal: orquestra as vistas e os filtros -->
   <script type="module">
-    // Importa como * para permitir que os ficheiros existan aínda que non exporten nada aínda
     import * as mapa     from './js/mapa.js';
     import * as buscador from './js/buscador.js';
     import './js/datos.js';
@@ -177,7 +180,6 @@
       Object.values(views).forEach(v => v.hidden = true);
       views[view].hidden = false;
       tabs.forEach(t => t.setAttribute('aria-selected', t.dataset.view===view));
-      // Amosar/ocultar campos específicos á vista
       document.querySelectorAll('[data-only]').forEach(n => {
         n.style.display = (n.getAttribute('data-only')===view) ? 'grid' : 'none';
       });
@@ -185,69 +187,78 @@
     tabs.forEach(t => t.addEventListener('click', () => show(t.dataset.view)));
     show('mapa');
 
-    // ---- Ligazóns para suxestións (Issues) ----
+    // ---- Ligazóns Issues ----
     document.getElementById('suxest').href =
       'https://github.com/fol-e-ar/map/issues/new?title=[Suxesti%C3%B3n]&body=Descrici%C3%B3n%3A%0AConcello%2FParroquia%3A%0AEnlace%20(se%20hai)%3A';
     document.getElementById('engadir').href =
       'https://github.com/fol-e-ar/map/issues/new?title=[Copla]%20T%C3%ADtulo&body=Localizaci%C3%B3n%20(c%C3%B3digo)%3A%0A%0ATexto%3A%0A%0AFonte%3A';
 
-    // ---- Inicialización de vistas ----
-    // CONTRATO esperado (impleméntao en js/mapa.js):
-    //   export function initMapa({ mapContainerId }) { ... }
-    //   export function onFiltersChange({ scope, ritmo, q }) { ... } // opcional
-    if (typeof mapa.initMapa === 'function') mapa.initMapa({ mapContainerId: 'map' });
-
-    // CONTRATO esperado (impleméntao en js/buscador.js):
-    //   export function initBuscador({ pezasListId, coplasListId, cestaCountId }) { ... }
-    //   export function applyFiltersFromUI({ scope, ritmo, q }) { return {scope,ritmo,q}; }
-    if (typeof buscador.initBuscador === 'function') {
-      buscador.initBuscador({ pezasListId: 'pezas-list', coplasListId: 'coplas-list', cestaCountId: 'cesta-count' });
-    }
-
-    // ---- Bus de filtros ----
-    const territorioEl = document.getElementById('territorio');
-    const ritmoEl      = document.getElementById('ritmo');
-    const qEl          = document.getElementById('q');
+    // ---- Estado global de ámbito ----
+    let currentScope = ''; // prov:.. | com:.. | con:.. | par:..
+    const scopeRow   = document.getElementById('scope-row');
+    const scopeLabel = document.getElementById('scope-label');
+    const scopeClear = document.getElementById('scope-clear');
 
     function emitFiltersChange({scope, ritmo, q}){
       const detail = { scope: scope || '', ritmo: ritmo || '', q: q || '' };
       document.dispatchEvent(new CustomEvent('filters:change', { detail }));
-      // Que o mapa poida reaccionar (se define onFiltersChange)
       if (typeof mapa.onFiltersChange === 'function') mapa.onFiltersChange(detail);
     }
 
+    function setScope(scope, labelText){
+      currentScope = scope || '';
+      if (currentScope) {
+        scopeLabel.textContent = labelText || currentScope;
+        scopeRow.style.display = 'grid';
+      } else {
+        scopeRow.style.display = 'none';
+      }
+      emitFiltersChange({ scope: currentScope, ritmo: ritmoEl?.value || '', q: qEl?.value || '' });
+    }
+
+    scopeClear.addEventListener('click', () => setScope('', ''));
+
+    // ---- Inicialización de vistas ----
+    if (typeof mapa.initMapa === 'function') mapa.initMapa({ mapContainerId: 'map' });
+    if (typeof buscador.initBuscador === 'function') {
+      buscador.initBuscador({ pezasListId: 'pezas-list', coplasListId: 'coplas-list', cestaCountId: 'cesta-count' });
+    }
+
+    // ---- Inputs de filtro restantes ----
+    const ritmoEl = document.getElementById('ritmo');
+    const qEl     = document.getElementById('q');
+
     document.getElementById('apply').addEventListener('click', () => {
-      const payload = typeof buscador.applyFiltersFromUI === 'function'
-        ? buscador.applyFiltersFromUI({
-            scope: territorioEl?.value || '',
-            ritmo: ritmoEl?.value || '',
-            q: qEl?.value || ''
-          })
-        : { scope: territorioEl?.value || '', ritmo: ritmoEl?.value || '', q: qEl?.value || '' };
-      emitFiltersChange(payload);
+      emitFiltersChange({ scope: currentScope, ritmo: ritmoEl?.value || '', q: qEl?.value || '' });
     });
 
     document.getElementById('clear').addEventListener('click', () => {
-      if (territorioEl) territorioEl.value = '';
       if (ritmoEl) ritmoEl.value = '';
       if (qEl) qEl.value = '';
-      const payload = typeof buscador.applyFiltersFromUI === 'function'
-        ? buscador.applyFiltersFromUI({ scope:'', ritmo:'', q:'' })
-        : { scope:'', ritmo:'', q:'' };
-      emitFiltersChange(payload);
+      setScope('', '');
     });
 
-    // ---- Exemplo: o mapa pode emitir seleccionar parroquia ----
-    // Dentro de js/mapa.js, cando o usuario preme nunha parroquia:
-    // document.dispatchEvent(new CustomEvent('map:open-parroquia', { detail: { parroquiaId:'1504303' } }));
+    // ---- Dende o mapa → pezas dunha parroquia ----
     document.addEventListener('map:open-parroquia', (e) => {
-      const { parroquiaId } = e.detail || {};
-      if (parroquiaId && territorioEl) {
-        territorioEl.value = `par:${parroquiaId}`;
-        const payload = { scope: territorioEl.value, ritmo: ritmoEl?.value || '', q: qEl?.value || '' };
-        emitFiltersChange(payload);
-        show('pezas'); // p.ex., ao escoller parroquia abrimos vista de Pezas
-      }
+      const { parroquiaId, label } = e.detail || {};
+      if (!parroquiaId) return;
+      setScope(`par:${parroquiaId}`, label || `Parroquia ${parroquiaId}`);
+      show('pezas');
+    });
+
+    // ---- Autocompletado: set scope + cambiar vista ----
+    document.addEventListener('ui:set-scope', (e) => {
+      const { scope, label } = e.detail || {};
+      setScope(scope, label);
+      document.dispatchEvent(new CustomEvent('ui:switch-view', { detail: { view: 'pezas' }}));
+    });
+
+    // ---- Cambiar de vista (atajo) ----
+    document.addEventListener('ui:switch-view', (e) => {
+      const view = e.detail?.view;
+      if (!view) return;
+      const btn = document.querySelector(`.tab[data-view="${view}"]`);
+      btn?.click();
     });
   </script>
 </body>
