@@ -227,14 +227,31 @@
     // ---- Inputs de filtro restantes ----
     const ritmoEl = document.getElementById('ritmo');
     const qEl     = document.getElementById('q');
+    const lugarEl = document.getElementById('lugar');
 
-    document.getElementById('apply').addEventListener('click', () => {
-      emitFiltersChange({ scope: currentScope, ritmo: ritmoEl?.value || '', q: qEl?.value || '' });
+    document.getElementById('apply').addEventListener('click', async () => {
+      let scope = currentScope;
+      let label = '';
+
+      // Se non hai ámbito pero hai texto no buscador: resolvelo por texto
+      const qLugar = lugarEl?.value?.trim();
+      if (!scope && qLugar && typeof buscador.findScopeByText === 'function'){
+        const found = await buscador.findScopeByText(qLugar);
+        if (found){
+          scope = found.scope;
+          label = found.label;
+          setScope(scope, label);
+          document.dispatchEvent(new CustomEvent('ui:switch-view', { detail: { view: 'pezas' }}));
+        }
+      }
+
+      emitFiltersChange({ scope: scope || currentScope, ritmo: ritmoEl?.value || '', q: qEl?.value || '' });
     });
 
     document.getElementById('clear').addEventListener('click', () => {
       if (ritmoEl) ritmoEl.value = '';
       if (qEl) qEl.value = '';
+      if (lugarEl) lugarEl.value = '';
       setScope('', '');
     });
 

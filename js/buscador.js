@@ -22,6 +22,8 @@ function escapeHtml(s){ return String(s||'').replace(/[&<>"']/g, m=>({'&':'&amp;
 function escapeAttr(s){ return escapeHtml(s).replace(/"/g,'&quot;'); }
 function renderList(ul, rows, toHTML){ ul.innerHTML = rows.map(toHTML).join('') || '<li style="opacity:.7">Sen resultados</li>'; }
 
+function normalize(s){ return (s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase(); }
+
 /* ------------------- MAPEO (PARA FILTRAR POR ÁMBITO) ------------------- */
 function pertenceAoScopeFactory(mapeo){
   return function pertenceAoScope(location, scope){
@@ -135,6 +137,30 @@ function renderSuxest(ul, rows){
   `).join('') || '<li style="opacity:.7">Sen resultados</li>';
 }
 
+// Cache do índice de lugares
+let __lugaresIndex = null;
+async function getLugaresIndex(){
+  if (__lugaresIndex) return __lugaresIndex;
+  __lugaresIndex = await buildIndexLugares();
+  return __lugaresIndex;
+}
+
+// Export: resolver ámbito por texto libre (para botón Aplicar)
+export async function findScopeByText(q){
+  const idx = await getLugaresIndex();
+  const nq = normalize(q||'');
+  if (!nq) return null;
+
+  // 1) comezo
+  let out = idx.filter(i => normalize(i.label).startsWith(nq));
+  // 2) inclusión
+  if (out.length === 0) out = idx.filter(i => normalize(i.label).includes(nq));
+  if (out.length === 0) return null;
+
+  const best = out[0];
+  return { scope: best.scope, label: best.label };
+}
+
 function attachAutocomplete({ inputId='lugar', listId='lugar-suxest' }){
   const inp = document.getElementById(inputId);
   const ul  = document.getElementById(listId);
@@ -143,16 +169,34 @@ function attachAutocomplete({ inputId='lugar', listId='lugar-suxest' }){
   let index = [];
   let ready = false;
 
-  (async () => { index = await buildIndexLugares(); ready = true; })();
+  (async () => {
+    ul.innerHTML = '<li style="opacity:.6">Cargando índice…</li>';
+    index = await getLugaresIndex();
+    ready = true;
+    ul.innerHTML = '';
+  })();
 
-  let lastQ = '';
-  inp.addEventListener('input', () => {
-    const q = (inp.value || '').trim().toLowerCase();
-    if (!ready || q === lastQ) return;
-    lastQ = q;
-    if (!q) { ul.innerHTML = ''; return; }
-    const out = index.filter(i => i.label.toLowerCase().includes(q)).slice(0, 15);
+  function renderFor(q){
+    if (!ready){ ul.innerHTML = '<li style="opacity:.6">Cargando…</li>'; return; }
+    const nq = normalize(q);
+    if (!nq){ ul.innerHTML = ''; return; }
+    const out = index.filter(i => normalize(i.label).includes(nq)).slice(0, 15);
     renderSuxest(ul, out);
+  }
+
+  inp.addEventListener('input', () => renderFor(inp.value || ''));
+
+  // ENTER = escolle primeira suxestión
+  inp.addEventListener('keydown', (ev) => {
+    if (ev.key !== 'Enter') return;
+    const first = ul.querySelector('li[data-scope]');
+    if (first){
+      const scope = first.getAttribute('data-scope');
+      const label = first.textContent.trim();
+      document.dispatchEvent(new CustomEvent('ui:set-scope', { detail: { scope, label } }));
+      ul.innerHTML = '';
+      inp.value = '';
+    }
   });
 
   ul.addEventListener('click', (ev) => {
@@ -160,9 +204,7 @@ function attachAutocomplete({ inputId='lugar', listId='lugar-suxest' }){
     if (!li) return;
     const scope = li.getAttribute('data-scope');
     const label = li.textContent.trim();
-    // Comunicamos ao index: set scope + cambiar vista
     document.dispatchEvent(new CustomEvent('ui:set-scope', { detail: { scope, label } }));
-    // Limpeza UI
     ul.innerHTML = '';
     inp.value = '';
   });
