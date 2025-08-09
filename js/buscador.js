@@ -90,40 +90,51 @@ async function buildIndexLugares(){
     fetchJSON('assets/concellos.geojson'),
   ]);
 
-  // Parroquias desde TopoJSON (lixeiro)
   let parroquiasGeo = null;
   try {
     const topo = await fetchJSON('assets/parroquias.topo.json');
     const name = (topo.objects && Object.keys(topo.objects)[0]) || 'parroquias';
     if (window.topojson) parroquiasGeo = window.topojson.feature(topo, topo.objects[name]);
-  } catch(e){ /* opcional: sen parroquias no index se non hai topo */ }
+  } catch(e){ /* opcional */ }
 
   const idx = [];
-
   for (const f of (provincias.features||[])) {
     const p = f.properties||{};
     idx.push({ label: `${p.PROVINCIA}`, type: 'prov', code: String(p.CODPROV), scope: `prov:${String(p.CODPROV)}` });
   }
-
   for (const f of (comarcas.features||[])) {
     const p = f.properties||{};
     idx.push({ label: `${p.COMARCA}`, type: 'com', code: String(p.CODCOM), scope: `com:${String(p.CODCOM)}` });
   }
-
   for (const f of (concellos.features||[])) {
     const p = f.properties||{};
     idx.push({ label: `${p.CONCELLO}`, type: 'con', code: String(p.CODCONC), scope: `con:${String(p.CODCONC)}` });
   }
-
   if (parroquiasGeo) {
     for (const f of (parroquiasGeo.features||[])) {
       const p = f.properties||{};
       idx.push({ label: `${p.PARROQUIA} — ${p.CONCELLO}`, type: 'par', code: String(p.CODPARRO), scope: `par:${String(p.CODPARRO)}` });
     }
   }
-
-  idx.sort((a,b)=>a.label.localeCompare(b.label, 'gl'));
   return idx;
+}
+
+function rankCandidates(index, q){
+  const qq = q.toLowerCase();
+  const typeRank = { prov: 0, com: 1, con: 2, par: 3 };
+
+  function score(item){
+    const label = item.label.toLowerCase();
+    if (label.startsWith(qq)) return 0;      // mellor
+    if (label.includes(qq))  return 1;       // bo
+    return 2;                                 // peor
+  }
+  // Orden: mellor score → typeRank → alfabético
+  return index
+    .filter(i => i.label.toLowerCase().includes(qq))
+    .map(i => ({ ...i, _s: score(i) }))
+    .sort((a,b) => (a._s - b._s) || (typeRank[a.type]-typeRank[b.type]) || a.label.localeCompare(b.label, 'gl'))
+    .slice(0, 20);
 }
 
 function renderSuxest(ul, rows){
@@ -161,52 +172,69 @@ export async function findScopeByText(q){
   return { scope: best.scope, label: best.label };
 }
 
-function attachAutocomplete({ inputId='lugar', listId='lugar-suxest' }){
+function attachAutocomplete({ inputId='lugar', listId='lugar-suxest', territorioSelectId='territorio' }){
   const inp = document.getElementById(inputId);
   const ul  = document.getElementById(listId);
+  const territorioSel = document.getElementById(territorioSelectId);
   if (!inp || !ul) return;
 
   let index = [];
   let ready = false;
 
   (async () => {
-    ul.innerHTML = '<li style="opacity:.6">Cargando índice…</li>';
-    index = await getLugaresIndex();
-    ready = true;
-    ul.innerHTML = '';
+    try{
+      ul.innerHTML = '<li style="opacity:.6">Cargando índice…</li>';
+      index = await buildIndexLugares();
+      ready = true;
+      ul.innerHTML = '';
+    }catch(e){
+      ready = false;
+      ul.innerHTML = '<li style="opacity:.7;color:#f99">Erro ao cargar índices. Revisa os .geojson.</li>';
+      console.error(e);
+    }
   })();
 
-  function renderFor(q){
-    if (!ready){ ul.innerHTML = '<li style="opacity:.6">Cargando…</li>'; return; }
-    const nq = normalize(q);
-    if (!nq){ ul.innerHTML = ''; return; }
-    const out = index.filter(i => normalize(i.label).includes(nq)).slice(0, 15);
-    renderSuxest(ul, out);
-  }
+  let lastQ = '';
+  inp.addEventListener('input', () => {
+    const q = (inp.value || '').trim();
+    if (!ready || q === lastQ) return;
+    lastQ = q;
 
-  inp.addEventListener('input', () => renderFor(inp.value || ''));
-
-  // ENTER = escolle primeira suxestión
-  inp.addEventListener('keydown', (ev) => {
-    if (ev.key !== 'Enter') return;
-    const first = ul.querySelector('li[data-scope]');
-    if (first){
-      const scope = first.getAttribute('data-scope');
-      const label = first.textContent.trim();
-      document.dispatchEvent(new CustomEvent('ui:set-scope', { detail: { scope, label } }));
+    if (!q) {
       ul.innerHTML = '';
-      inp.value = '';
+      document.dispatchEvent(new CustomEvent('map:highlight-candidates', { detail: { scopes: [] }}));
+      return;
     }
+
+    const out = rankCandidates(index, q);
+    // render
+    ul.innerHTML = out.map(r => `
+      <li data-scope="${r.scope}" class="sux-item">
+        <div><strong>${escapeHtml(r.label)}</strong> <span class="tag" style="margin-left:6px">${r.type.toUpperCase()}</span></div>
+      </li>
+    `).join('') || '<li style="opacity:.7">Sen resultados</li>';
+
+    // pedir ó mapa que resalte candidatos
+    const scopes = out.map(o => o.scope);
+    document.dispatchEvent(new CustomEvent('map:highlight-candidates', { detail: { scopes }}));
   });
 
   ul.addEventListener('click', (ev) => {
     const li = ev.target.closest('li[data-scope]');
     if (!li) return;
     const scope = li.getAttribute('data-scope');
-    const label = li.textContent.trim();
-    document.dispatchEvent(new CustomEvent('ui:set-scope', { detail: { scope, label } }));
+
+    // Aplicar ámbito ao select por consistencia
+    if (territorioSel) territorioSel.value = scope;
+
+    // Notificar filtros + centrar mapa e marcar selección
+    document.dispatchEvent(new CustomEvent('filters:change', { detail: { scope, ritmo:'', q:'' } }));
+    document.dispatchEvent(new CustomEvent('map:zoom-to-scope', { detail: { scope } }));
+
+    // Limpar UI e saltar a Pezas
     ul.innerHTML = '';
     inp.value = '';
+    document.dispatchEvent(new CustomEvent('ui:switch-view', { detail: { view: 'pezas' }}));
   });
 }
 
@@ -217,18 +245,26 @@ function renderPezas({ pezas, pertenceAoScope, pezasUL, scope, ritmo }){
     (!ritmo || p.ritmo === ritmo) &&
     pertenceAoScope(String(p.location), scope)
   );
-  renderList(pezasUL, filtered, (row) => `
-    <li>
+
+  pezasUL.innerHTML = filtered.map(row => `
+    <li data-open-peza="${encodeURIComponent(row.id)}" title="Ver peza">
       <div>
         <div><strong>${escapeHtml(row.title || '')}</strong></div>
         <div class="tag">Ritmo: ${escapeHtml(row.ritmo || '')}</div>
         <div style="font-size:12px;color:var(--muted)">Localización: ${escapeHtml(String(row.location||''))}</div>
       </div>
       <div class="actions">
-        <a href="templates/parroquia.html?id=${encodeURIComponent(row.location)}">Ver parroquia</a>
+        <span class="tag">Ver</span>
       </div>
     </li>
-  `);
+  `).join('') || '<li style="opacity:.7">Sen resultados</li>';
+
+  pezasUL.onclick = (ev) => {
+    const li = ev.target.closest('li[data-open-peza]');
+    if (!li) return;
+    const id = li.getAttribute('data-open-peza');
+    location.href = `templates/peza.html?id=${id}`;
+  };
 }
 
 function renderCoplas({ coplas, pertenceAoScope, coplasUL, scope, q, onAdd }){

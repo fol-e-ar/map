@@ -42,8 +42,8 @@
   <noscript>Esta aplicación precisa JavaScript para funcionar.</noscript>
 
   <header>
-    <div class="brand">
-      <img src="assets/logo.png" alt="fol e ar">
+    <div class="brand" id="brand-home" style="cursor:pointer">
+      <img src="assets/logo.png" alt="fol e ar" />
       <div>
         <div style="font-weight:800">fol e ar</div>
         <div style="font-size:12px;color:var(--muted)">Mapa do folclore galego</div>
@@ -55,6 +55,27 @@
       <button class="tab" role="tab" aria-selected="false" data-view="coplas">Coplas</button>
     </nav>
   </header>
+  
+  <script>
+    // Navegación “volver onde estabas”
+    (function(){
+      const el = document.getElementById('brand-home');
+      if (!el) return;
+      el.addEventListener('click', () => {
+        // 1º intentamos volver no histórico se vimos dende a mesma orixe
+        try {
+          const ref = document.referrer || '';
+          const sameOrigin = ref && new URL(ref).origin === location.origin;
+          if (sameOrigin) {
+            history.back();
+            return;
+          }
+        } catch {}
+        // 2º se non, imos ao index, que restaurará o estado dende sessionStorage
+        location.href = (location.pathname.endsWith('/templates/peza.html')) ? '../index.html' : 'index.html';
+      });
+    })();
+  </script>
 
   <div class="wrap">
     <div class="grid">
@@ -62,7 +83,16 @@
       <aside class="card">
         <div class="inner filters">
           <h3 class="section-title">Filtros</h3>
-
+          <!-- CAPA DO MAPA -->
+          <div class="row">
+            <label for="map-layer">Capa do mapa</label>
+            <select id="map-layer">
+              <option value="par" selected>Parroquias</option>
+              <option value="con">Concellos</option>
+              <option value="com">Comarcas</option>
+              <option value="prov">Provincias</option>
+            </select>
+          </div>
           <!-- BUSCADOR GLOBAL con autocompletado -->
           <div class="row">
             <label for="lugar">Buscar lugar (provincia, comarca, concello ou parroquia)</label>
